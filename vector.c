@@ -85,8 +85,3 @@ void vec3Spherical(double rho, double phi, double theta, double v[3]) {
     v[1] = rho * sin(phi) * sin(theta);
     v[2] = rho * cos(phi);
 }
-
-void vecOpenGL(int dim, double v[], GLfloat openGL[]) {
-	for (int i = 0; i < dim; i += 1)
-		openGL[i] = v[i];
-}
