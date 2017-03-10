@@ -11,17 +11,60 @@
 #include "matrix.c"
 #include "shapes.c"
 #include "000pixel.h"
+#include "camera.c"
+
 #define WIDTH 512
 #define HEIGHT 512
 
+#define ORTHOGRAPHIC 0
+#define PERSPECTIVE 0
+
+int projectionType;
+int worldHeight = 512;
+int worldWidth = 512;
+
+int numShapes = 1;
 shape *shapes[1];
-int shapeNum;
+
+#define indexSPHERE1 0
+
+camCamera cam;
+double camToScreenDist;
+
+int getScreenCoordX(double coord) {
+    double ratio = WIDTH / worldWidth;
+    return coord * ratio;
+}
+
+int getScreenCoordY(double coord) {
+    double ratio = HEIGHT / worldHeight;
+    return coord * ratio;
+}
 
 void launchRays()  {
-    for (int i = 0; i < WIDTH; ++i)  {
-        for (int j = 0; j < HEIGHT; ++j)  {
+    double isom[4][4];
+    mat44InverseIsometry(cam.rotation, cam.translation, isom);
+    
+    for (int i = 0; i < numShapes; i++) {
+        for (int j = 0; j < 1; j++) {
+            double *worldCoords = shapes[i] -> unif;
+            worldCoords[3] = 1;
+            mat441Multiply(isom, worldCoords, shapes[i] -> unif);
+        }
+    }
+    
+    for (int i = -worldWidth / 2; i < worldWidth / 2; ++i)  {
+        for (int j = -worldHeight / 2; j < worldHeight / 2; ++j)  {
             double s[3] = {i, j, 0};
             double d[3] = {0, 0, 1};
+            
+            if (projectionType == PERSPECTIVE) {
+                d[0] = i;
+                d[1] = j;
+                d[2] = camToScreenDist;
+                vecUnit(3, d, d);
+            }
+            
             double rgb[3] = {0, 0, 0};
             double loc[3] = {-1, -1, -1};
             int maxIndex = -1;
@@ -37,33 +80,44 @@ void launchRays()  {
             // }
             if(shapes[0] -> intersection(shapes[0], s, d, loc, rgb) == 0)  {
                 printf("got here\n");
-                pixSetRGB(i, j, rgb[0], rgb[1], rgb[2]);
+                int iScreen = getScreenCoordX(i);
+                int jScreen = getScreenCoordY(j);
+                pixSetRGB(iScreen, jScreen, rgb[0], rgb[1], rgb[2]);
             }
         }
     }
 
 }
 
-void sphereSetup(int shapeIndex)  {
-    double radius = 30;
-    double center[3] = {256, 256, 50};
+void sphereSetup(double radius, double center[], int shapeIndex)  {
     shapes[shapeIndex] = sphereMalloc();
     sphereInit(shapes[shapeIndex], center, radius);
 }
 
-void test()  {
-    double s[3] = {256, 256, 0};
-    double d[3] = {0,0, 1};
-    double loc[3];
-    double rgb[3];
-    int j = shapes[0] -> intersection(shapes[0], s, d, loc, rgb);
+void initializeScene() {
+    double sphere1radius = 30;
+    double sphere1Center[3] = {256, 256, 50};
+    sphereSetup(sphere1radius, sphere1Center, indexSPHERE1);
+}
+
+
+// probably want to abstract the camera later
+void initializeCamera() {
+    double *target = shapes[indexSPHERE1] -> unif;
+    double camPos[3] = {256, 256, -camToScreenDist};
+    double phi = M_PI / 4.0;
+    double theta = M_PI / 4.0;
+    camLookAtAndFrom(&cam, camPos, target, phi, theta); 
+    camSetWidthHeight(&cam, WIDTH, HEIGHT);
 }
 
 int main(int argc, const char **argv)  {
+    projectionType = PERSPECTIVE;
     pixInitialize(WIDTH, HEIGHT, "ray tracing");
     pixClearRGB(0.0, 0.0, 0.0);
-    sphereSetup(0);
-    // test();
+    initializeScene();
+    initializeCamera();
+    camToScreenDist = 1000;
     launchRays();
     pixRun();
 }
