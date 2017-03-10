@@ -60,9 +60,8 @@ void launchRays()  {
             double d[3] = {0, 0, 1};
             
             if (projectionType == PERSPECTIVE) {
-                d[0] = i;
-                d[1] = j;
-                d[2] = camToScreenDist;
+                double pixelCoord[3] = {i, j, camToScreenDist};
+                vecSubtract(3, pixelCoord, s, d);
                 vecUnit(3, d, d);
             }
             
