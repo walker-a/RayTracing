@@ -53,9 +53,10 @@ void launchRays()  {
         }
     }
     
-    for (int i = -worldWidth / 2; i < worldWidth / 2; ++i)  {
-        for (int j = -worldHeight / 2; j < worldHeight / 2; ++j)  {
-            double s[3] = {i, j, 0};
+    for (int i = 0; i < worldWidth; ++i)  {
+        for (int j = 0; j < worldHeight; ++j)  {
+            double *sTemp = cam.camPos;
+            double s[3] = {s[0], s[1], s[2]};
             double d[3] = {0, 0, 1};
             
             if (projectionType == PERSPECTIVE) {
@@ -105,10 +106,7 @@ void initializeScene() {
 void initializeCamera() {
     double *target = shapes[indexSPHERE1] -> unif;
     double camPos[3] = {256, 256, -camToScreenDist};
-    double phi = M_PI / 4.0;
-    double theta = M_PI / 4.0;
-    camLookAtAndFrom(&cam, camPos, target, phi, theta); 
-    camSetWidthHeight(&cam, WIDTH, HEIGHT);
+    camLookAtAndFrom(&cam, camPos, target); 
 }
 
 int main(int argc, const char **argv)  {

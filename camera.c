@@ -23,6 +23,7 @@ struct camCamera {
 	double distance;
 	double phi, theta;
 	double target[3];
+    double *camPos;
 };
 
 
@@ -80,16 +81,14 @@ void camLookAt(camCamera *cam, double target[3], double rho, double phi,
 }
 
 // hopefully lets you set a camera position as well as a target
-void camLookAtAndFrom(camCamera *cam, double position[3], double target[3], double phi, 
-		double theta) {
-	double z[3], y[3], yStd[3] = {0.0, 1.0, 0.0}, zStd[3] = {0.0, 0.0, 1.0};
-	vec3Spherical(1.0, phi, theta, z);
-	vec3Spherical(1.0, M_PI / 2.0 - phi, theta + M_PI, y);
-	mat33BasisRotation(yStd, zStd, y, z, cam->rotation);
-    double vecAB[3] = {target[0] - position[0], target[1] - position[1], target[2] - position[2]};
-    double distance = vecLength(3, vecAB);
-	vecScale(3, distance, z, cam->translation);
-	vecAdd(3, target, cam->translation, cam->translation);
+void camLookAtAndFrom(camCamera *cam, double position[3], double target[3]) {
+    cam -> camPos = position;
+    double vecV[3];
+    vecSubtract(3, target, position, vecV);
+    double rho = vecLength(3, vecV);
+    double phi = acos(vecV[2] / rho);
+	double theta = atan2(vecV[0], vecV[1]);
+    camLookAt(cam, target, rho, phi, theta);
 }
 
 /* Sets the camera's rotation and translation, in a manner suitable for first-
