@@ -127,40 +127,6 @@ void launchRays()  {
     }
 }
 
-//void launchRays() {
-//    double pixPos[3];
-//    for (int i = -screenWidth / 2; i < screenWidth / 2; i++) {
-//        for (int j = -screenHeight / 2; j < screenHeight / 2; j++) {
-//            getNewPoint(screenCenter, lrVec, i, pixPos);
-//            getNewPoint(pixPos, udVec, j, pixPos);
-//            
-//            double rayDir[3];
-//            vecSubtract(3, pixPos, camPos, rayDir);
-//            vecUnit(3, rayDir, rayDir);
-//            
-//            double rgb[3] = {0, 0, 0};
-//            double loc[3] = {-1, -1, -1};
-//            int maxIndex = -1;
-//            int max = -1;
-//
-//            // for (int k = 0; k < shapeNum; ++k)  {
-//            //     if(shapes[k] -> intersection(shapes[k], s, d, loc, rgb) != 0)  {
-//            //         if(loc[2] > max)  {
-//            //             max = loc[2];
-//            //             maxIndex = k;
-//            //         }
-//            //     }
-//            // }
-//            if(shapes[0] -> intersection(shapes[0], pixPos, rayDir, loc, rgb) == 0)  {
-//                int iScreen = getScreenCoordX(i);
-//                int jScreen = getScreenCoordY(j);
-//                pixSetRGB(iScreen, jScreen, rgb[0], rgb[1], rgb[2]);
-//            }
-//            
-//        }
-//    }
-//}
-
 // prepares the camera and viewing plane for ray tracing, given a target in the scene
 // call after initializeShapes()
 void sceneInitialize(double targetPos[3], double targetToScreenDist, double screenToCamDist) {
