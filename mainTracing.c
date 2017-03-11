@@ -28,7 +28,7 @@ shape *shapes[1];
 
 #define indexSPHERE1 0
 
-camCamera camera;
+camCamera cam;
 double camToScreenDist;
 
 int getScreenCoordX(double coord) {
@@ -41,32 +41,27 @@ int getScreenCoordY(double coord) {
     return coord * ratio;
 }
 
-void launchRays(camCamera *cam)  {
-    printf("cam pos coords0: %f, %f, %f\n", cam->camPos[0], cam->camPos[1], cam->camPos[2]);
-    printf("cam pos coords1: %f, %f, %f\n", cam->camPos[0], cam->camPos[1], cam->camPos[2]);
+void launchRays()  {
     double isom[4][4];
-    mat44InverseIsometry(cam -> rotation, cam -> translation, isom);
-    double camEyePos[4];
-    double camWorldPos[4] = {cam -> camPos[0], cam -> camPos[1], cam -> camPos[2], 1};
-    mat441Multiply(isom, camWorldPos, camEyePos);
-    printf("cam eye pos coords: %f, %f, %f\n", camEyePos[0], camEyePos[1], camEyePos[2]);
+    mat44InverseIsometry(cam.rotation, cam.translation, isom);
     
     for (int i = 0; i < numShapes; i++) {
         for (int j = 0; j < 1; j++) {
             double *worldCoords = shapes[i] -> unif;
-            worldCoords[3] = 0;
+            worldCoords[3] = 1;
             mat441Multiply(isom, worldCoords, shapes[i] -> unif);
         }
     }
-    printf("sphere center coords: %f, %f, %f\n", shapes[0] -> unif[0], shapes[0] -> unif[1], shapes[0] -> unif[2]);
     
-    for (int i = -worldWidth / 2; i < worldWidth / 2; ++i)  {
-        for (int j = -worldHeight / 2; j < worldHeight / 2; ++j)  {
-            double s[3] = {i, j, camEyePos[2] + camToScreenDist};
+    for (int i = 0; i < worldWidth; ++i)  {
+        for (int j = 0; j < worldHeight; ++j)  {
+            double *sTemp = cam.camPos;
+            double s[3] = {s[0], s[1], s[2]};
             double d[3] = {0, 0, 1};
             
             if (projectionType == PERSPECTIVE) {
-                vecSubtract(3, s, camEyePos, d);
+                double pixelCoord[3] = {i, j, camToScreenDist};
+                vecSubtract(3, pixelCoord, s, d);
                 vecUnit(3, d, d);
             }
             
@@ -83,7 +78,9 @@ void launchRays(camCamera *cam)  {
             //         }
             //     }
             // }
-            if(shapes[0] -> intersection(shapes[0], s, d, loc, rgb) == 0)  {
+            if(shapes[0] -> intersection(shapes[0], s, d, loc) == 0)  {
+                
+                printf("got here\n");
                 int iScreen = getScreenCoordX(i);
                 int jScreen = getScreenCoordY(j);
                 pixSetRGB(iScreen, jScreen, rgb[0], rgb[1], rgb[2]);
@@ -105,12 +102,10 @@ void initializeScene() {
 
 
 // probably want to abstract the camera later
-// need to initialize scene first
-void initializeCamera(camCamera *cam) {
-    camToScreenDist = 500;
+void initializeCamera() {
     double *target = shapes[indexSPHERE1] -> unif;
     double camPos[3] = {256, 256, -camToScreenDist};
-    camLookAtAndFrom(cam, camPos, target);
+    camLookAtAndFrom(&cam, camPos, target); 
 }
 
 int main(int argc, const char **argv)  {
@@ -118,7 +113,8 @@ int main(int argc, const char **argv)  {
     pixInitialize(WIDTH, HEIGHT, "ray tracing");
     pixClearRGB(0.0, 0.0, 0.0);
     initializeScene();
-    initializeCamera(&camera);
-    launchRays(&camera);
+    initializeCamera();
+    camToScreenDist = 1000;
+    launchRays();
     pixRun();
 }
