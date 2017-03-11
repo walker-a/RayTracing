@@ -59,7 +59,56 @@ void getNewPoint(double startPoint[3], double dir[3], double dist, double finish
     vecAdd(3, startPoint, largerVec, finishPoint);
 }
 
-void launchRays() {
+// launches a ray, does neccessary reflection.
+// writes answer to rgb
+// returns 0 on intersection, 1 on no intersection
+int shootRay(double s[3], double d[3], double rgb[3])  {
+            double candidateLoc[3];
+            double minIntersectLoc[3];
+            double minIntersectDist = -1;
+            double minNormal[3];
+            int minIndex = -1;
+            int max = -1;
+
+            for (int k = 0; k < numShapes; ++k)  {
+                double candidateNormal[3];
+                if(shapes[k] -> intersection(shapes[k], s, d, candidateLoc, candidateNormal) == 0)  {
+                    printf("got here\n");
+                    double stoCandidateVec[3];
+                    vecSubtract(3, candidateLoc, s, stoCandidateVec);
+                    double stoCandidateDist = vecLength(3, stoCandidateVec);
+                    if(minIntersectDist == -1 || 
+                        stoCandidateDist < minIntersectDist)  {
+                        vecCopy(3, candidateLoc, minIntersectLoc);
+                        vecCopy(3, candidateNormal, minNormal);
+                        minIntersectDist = stoCandidateDist;
+                    }
+                }
+            }
+
+            // if we hit something
+            if(minIndex != -1)  {
+                shapes[minIndex] -> color(shapes[minIndex], minIntersectLoc, rgb);
+
+                // if there's a reflection
+                if(shapes[minIndex] -> reflectivity > 0)  {
+                    // r = d − 2(d⋅n)n
+                    double twodnn[3];
+                    double r[3];
+                    double reflectedRGB[3];
+                    vecSubtract(3, d, twodnn, r);
+                    vecUnit(3, r, r);
+                    shootRay(minIntersectLoc, r, reflectedRGB);
+                    vecScale(3, shapes[minIndex] -> reflectivity, reflectedRGB, reflectedRGB);
+                    vecScale(3, 1 - shapes[minIndex] -> reflectivity, rgb, rgb);
+                    vecAdd(3, reflectedRGB, rgb, rgb);
+                }
+                return 0;
+            }
+            return 1;
+}
+
+void launchRays()  {
     double pixPos[3];
     for (int i = -screenWidth / 2; i < screenWidth / 2; i++) {
         for (int j = -screenHeight / 2; j < screenHeight / 2; j++) {
@@ -69,29 +118,48 @@ void launchRays() {
             double rayDir[3];
             vecSubtract(3, pixPos, camPos, rayDir);
             vecUnit(3, rayDir, rayDir);
-            
-            double rgb[3] = {0, 0, 0};
-            double loc[3] = {-1, -1, -1};
-            int maxIndex = -1;
-            int max = -1;
 
-            // for (int k = 0; k < shapeNum; ++k)  {
-            //     if(shapes[k] -> intersection(shapes[k], s, d, loc, rgb) != 0)  {
-            //         if(loc[2] > max)  {
-            //             max = loc[2];
-            //             maxIndex = k;
-            //         }
-            //     }
-            // }
-            if(shapes[0] -> intersection(shapes[0], pixPos, rayDir, loc, rgb) == 0)  {
-                int iScreen = getScreenCoordX(i);
-                int jScreen = getScreenCoordY(j);
-                pixSetRGB(iScreen, jScreen, rgb[0], rgb[1], rgb[2]);
-            }
-            
+            double rgb[3] = {.1,.1,.1};
+
+            shootRay(pixPos, rayDir, rgb);
+            pixSetRGB(getScreenCoordX(i), getScreenCoordY(j), rgb[0], rgb[1], rgb[2]);
         }
     }
 }
+
+//void launchRays() {
+//    double pixPos[3];
+//    for (int i = -screenWidth / 2; i < screenWidth / 2; i++) {
+//        for (int j = -screenHeight / 2; j < screenHeight / 2; j++) {
+//            getNewPoint(screenCenter, lrVec, i, pixPos);
+//            getNewPoint(pixPos, udVec, j, pixPos);
+//            
+//            double rayDir[3];
+//            vecSubtract(3, pixPos, camPos, rayDir);
+//            vecUnit(3, rayDir, rayDir);
+//            
+//            double rgb[3] = {0, 0, 0};
+//            double loc[3] = {-1, -1, -1};
+//            int maxIndex = -1;
+//            int max = -1;
+//
+//            // for (int k = 0; k < shapeNum; ++k)  {
+//            //     if(shapes[k] -> intersection(shapes[k], s, d, loc, rgb) != 0)  {
+//            //         if(loc[2] > max)  {
+//            //             max = loc[2];
+//            //             maxIndex = k;
+//            //         }
+//            //     }
+//            // }
+//            if(shapes[0] -> intersection(shapes[0], pixPos, rayDir, loc, rgb) == 0)  {
+//                int iScreen = getScreenCoordX(i);
+//                int jScreen = getScreenCoordY(j);
+//                pixSetRGB(iScreen, jScreen, rgb[0], rgb[1], rgb[2]);
+//            }
+//            
+//        }
+//    }
+//}
 
 // prepares the camera and viewing plane for ray tracing, given a target in the scene
 // call after initializeShapes()
@@ -121,7 +189,7 @@ void sceneInitialize(double targetPos[3], double targetToScreenDist, double scre
 // sets up a sphere, given a radius, center, and shapeIndex in our shape array
 void sphereSetup(double radius, double center[], int shapeIndex)  {
     shapes[shapeIndex] = sphereMalloc();
-    sphereInit(shapes[shapeIndex], center, radius);
+    sphereInit(shapes[shapeIndex], center, radius, 0);
 }
 
 void initializeShapes() {
