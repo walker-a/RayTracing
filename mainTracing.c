@@ -122,38 +122,6 @@ void launchRays()  {
 
 }
 
-void launchRaysTest()  {
-    double isom[4][4];
-    mat44InverseIsometry(cam.rotation, cam.translation, isom);
-    
-    for (int i = 0; i < numShapes; i++) {
-        for (int j = 0; j < 1; j++) {
-            double *worldCoords = shapes[i] -> unif;
-            worldCoords[3] = 1;
-            mat441Multiply(isom, worldCoords, shapes[i] -> unif);
-        }
-    }
-    
-    for (int i = 0; i < WIDTH; ++i)  {
-        for (int j = 0; j < HEIGHT; ++j)  {
-            double *sTemp = cam.camPos;
-            double s[3] = {i, j, 0};
-            double d[3] = {0, 0, 1};
-
-            if (projectionType == PERSPECTIVE) {
-                double pixelCoord[3] = {i, j, camToScreenDist};
-                vecSubtract(3, pixelCoord, s, d);
-                vecUnit(3, d, d);
-            }
-
-            double rgb[3] = {.1,.1,.1};
-
-            shootRay(s, d, rgb);
-            pixSetRGB(i, j, rgb[0], rgb[1], rgb[2]);
-        }
-    }
-}
-
 void sphereSetup(double radius, double center[], int shapeIndex)  {
     shapes[shapeIndex] = sphereMalloc();
     sphereInit(shapes[shapeIndex], center, radius, .5);
@@ -180,6 +148,6 @@ int main(int argc, const char **argv)  {
     initializeScene();
     initializeCamera();
     camToScreenDist = 1000;
-    launchRaysTest();
+    launchRays();
     pixRun();
 }
