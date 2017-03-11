@@ -73,7 +73,6 @@ int shootRay(double s[3], double d[3], double rgb[3])  {
             for (int k = 0; k < numShapes; ++k)  {
                 double candidateNormal[3];
                 if(shapes[k] -> intersection(shapes[k], s, d, candidateLoc, candidateNormal) == 0)  {
-                    printf("got here\n");
                     double stoCandidateVec[3];
                     vecSubtract(3, candidateLoc, s, stoCandidateVec);
                     double stoCandidateDist = vecLength(3, stoCandidateVec);
@@ -82,6 +81,7 @@ int shootRay(double s[3], double d[3], double rgb[3])  {
                         vecCopy(3, candidateLoc, minIntersectLoc);
                         vecCopy(3, candidateNormal, minNormal);
                         minIntersectDist = stoCandidateDist;
+                        minIndex = k;
                     }
                 }
             }
