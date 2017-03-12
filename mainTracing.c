@@ -212,14 +212,9 @@ void sceneInitialize(double targetPos[3], double targetToScreenDist, double scre
     targetToScreen = targetToScreenDist;
     screenToCam = screenToCamDist;
     //calculating screen center point
-    printf("targetPos: %f, %f, %f\n", targetPos[0], targetPos[1], targetPos[2]);
-    printf("viewDir: %f, %f, %f\n", viewDir[0], viewDir[1], viewDir[2]);
-    printf("targetToScreenDist: %f\n", targetToScreenDist);
     getNewPoint(targetPos, viewDir, targetToScreenDist, screenCenter);
-    printf("screenCenter: %f, %f, %f\n", screenCenter[0], screenCenter[1], screenCenter[2]);
     //calculating cam pos
     getNewPoint(screenCenter, viewDir, screenToCamDist, camPos);
-    printf("camPos: %f, %f, %f\n", camPos[0], camPos[1], camPos[2]);
 }
 
 // sets up a sphere, given a radius, center, and shapeIndex in our shape array
