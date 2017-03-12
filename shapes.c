@@ -19,8 +19,7 @@ int quadraticFormula (double results[2], double a, double b, double c)  {
 }
 
 void sphereColor(shape *inputSphere, double intersectLoc[3], double rgb[3])  {
-    double sphereColor[3] = {0, .7, .3};
-    vecCopy(3, sphereColor, rgb);
+    vecCopy(3, inputSphere -> unif + 4, rgb);
 }
 
 // returns whether intersection occurs, and if so, writes to a location
@@ -49,6 +48,7 @@ int sphereIntersect(shape *sphere, double s[3], double d[3], double intersectLoc
     double dtScaled[3];
     vecScale(3, t, d, dtScaled);
     vecAdd(3, s, dtScaled, intersectLoc);
+
     double notUnitNormal[3];
     vecSubtract(3, intersectLoc, center, notUnitNormal);
     vecUnit(3, notUnitNormal, normal);
@@ -58,16 +58,22 @@ int sphereIntersect(shape *sphere, double s[3], double d[3], double intersectLoc
 // mallocs the space for a sphere and its innards.
 shape *sphereMalloc()  {
      shape *toReturnShape = malloc(sizeof(shape));
-     toReturnShape -> unif = malloc(sizeof(double)*4);
+     toReturnShape -> unif = malloc(sizeof(double)*7);
      return toReturnShape;
 }
 
+void sphereDestroy(shape *toDestroy)  {
+    free(toDestroy -> unif);
+    free(toDestroy);
+}
+
 // sets the shape's unifs. [x, y, z, r]
-void sphereInit(shape *toReturnShape, double center[3], double radius, double reflectivity)  {
+void sphereInit(shape *toReturnShape, double center[3], double radius, double reflectivity, double colors[3])  {
     toReturnShape -> unifDim = 4;
     toReturnShape -> intersection = sphereIntersect;
     toReturnShape -> color = sphereColor;
     vecCopy(3, center, toReturnShape -> unif);
     toReturnShape -> unif[3] = radius;
     toReturnShape -> reflectivity = reflectivity;
+    vecCopy(3, colors, toReturnShape -> unif + 4);
 }

@@ -22,10 +22,11 @@ int projectionType;
 int screenHeight = 512;
 int screenWidth = 512;
 
-int numShapes = 1;
-shape *shapes[1];
+int numShapes = 2;
+shape *shapes[2];
 
 #define indexSPHERE1 0
+#define indexSPHERE2 1
 
 // variables necessary for tracing with the camera
 double target[3];
@@ -40,6 +41,9 @@ double lrVec[3];
 double udVec[3];
 double lrVecSpherical[3];
 double udVecSpherical[3];
+double backgroundColor[3] = {0,0,0};
+int maxDepth = 4;
+
 
 // converts vector coords to spherical coords
 // stores info in array: array[0] = rho, array[1] = phi, array[2] = theta
@@ -74,37 +78,6 @@ void modViewDir(double phi, double theta) {
     vecUnit(3, udVec, udVec);
 }
 
-// Move camera on arrow keys + shift + option.
-void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
-        int altOptionIsDown, int superCommandIsDown) {
-    switch(key) {
-        double theta = .1;
-        double phi = .1;
-        case 257:
-        break;
-        case 262:  // right
-        modViewDir(0, theta);
-        break;
-        case 263:  // left
-        modViewDir(0, -theta);
-        break;
-        case 264:  // down
-        if(shiftIsDown)  {
-            targetToScreen = targetToScreen - 1;
-        }  else  {
-            modViewDir(-phi, 0);
-        }
-        break;
-        case 265:  // up
-        if(shiftIsDown)  {
-            targetToScreen = targetToScreen + 1;
-        }  else  {
-            modViewDir(phi, 0);
-        }
-        break;
-    }
-}
-
 int getScreenCoordX(double coord) {
     double ratio = WIDTH / screenWidth;
     coord = coord + screenWidth / 2;
@@ -129,50 +102,58 @@ void getNewPoint(double startPoint[3], double dir[3], double dist, double finish
 // launches a ray, does neccessary reflection.
 // writes answer to rgb
 // returns 0 on intersection, 1 on no intersection
-int shootRay(double s[3], double d[3], double rgb[3])  {
-            double candidateLoc[3];
-            double minIntersectLoc[3];
-            double minIntersectDist = -1;
-            double minNormal[3];
-            int minIndex = -1;
-            int max = -1;
+int shootRay(double s[3], double d[3], double rgb[3], int depth)  {
+    if(depth >= maxDepth)  {
+        return 2;
+    }
+    double candidateLoc[3];
+    double minIntersectLoc[3];
+    double minIntersectDist = -1;
+    double minNormal[3];
+    int minIndex = -1;
+    int max = -1;
 
-            for (int k = 0; k < numShapes; ++k)  {
-                double candidateNormal[3];
-                if(shapes[k] -> intersection(shapes[k], s, d, candidateLoc, candidateNormal) == 0)  {
-                    double stoCandidateVec[3];
-                    vecSubtract(3, candidateLoc, s, stoCandidateVec);
-                    double stoCandidateDist = vecLength(3, stoCandidateVec);
-                    if(minIntersectDist == -1 || 
-                        stoCandidateDist < minIntersectDist)  {
-                        vecCopy(3, candidateLoc, minIntersectLoc);
-                        vecCopy(3, candidateNormal, minNormal);
-                        minIntersectDist = stoCandidateDist;
-                        minIndex = k;
-                    }
-                }
+    for (int k = 0; k < numShapes; ++k)  {
+        double candidateNormal[3];
+        if(shapes[k] -> intersection(shapes[k], s, d, candidateLoc, candidateNormal) == 0)  {
+            double stoCandidateVec[3];
+            vecSubtract(3, candidateLoc, s, stoCandidateVec);
+            double stoCandidateDist = vecLength(3, stoCandidateVec);
+            if(minIntersectDist == -1 || 
+                stoCandidateDist < minIntersectDist)  {
+                vecCopy(3, candidateLoc, minIntersectLoc);
+                vecCopy(3, candidateNormal, minNormal);
+                minIntersectDist = stoCandidateDist;
+                minIndex = k;
             }
+        }
+    }
 
-            // if we hit something
-            if(minIndex != -1)  {
-                shapes[minIndex] -> color(shapes[minIndex], minIntersectLoc, rgb);
+    // if we hit something
+    if(minIndex != -1)  {
+        shapes[minIndex] -> color(shapes[minIndex], minIntersectLoc, rgb);
 
-                // if there's a reflection
-                if(shapes[minIndex] -> reflectivity > 0)  {
-                    // r = d − 2(d⋅n)n
-                    double twodnn[3];
-                    double r[3];
-                    double reflectedRGB[3];
-                    vecSubtract(3, d, twodnn, r);
-                    vecUnit(3, r, r);
-                    shootRay(minIntersectLoc, r, reflectedRGB);
-                    vecScale(3, shapes[minIndex] -> reflectivity, reflectedRGB, reflectedRGB);
-                    vecScale(3, 1 - shapes[minIndex] -> reflectivity, rgb, rgb);
-                    vecAdd(3, reflectedRGB, rgb, rgb);
-                }
-                return 0;
-            }
-            return 1;
+        // if there's a reflection
+        if(shapes[minIndex] -> reflectivity > 0)  {
+            // r = d − 2(d⋅n)n
+            double twodnn[3];
+            double r[3];
+            double reflectedRGB[3] = {0,0,0};
+            vecScale(3, 2 * vecDot(3, d, minNormal), minNormal, twodnn);
+            vecSubtract(3, d, twodnn, r);
+            vecUnit(3, r, r);
+            double nudgedS[3];
+            double tinyR[3];
+            vecScale(3, .01, r, tinyR);
+            vecAdd(3, minIntersectLoc, tinyR, nudgedS);
+            shootRay(nudgedS, r, reflectedRGB, depth + 1);
+            vecScale(3, shapes[minIndex] -> reflectivity, reflectedRGB, reflectedRGB);
+            vecScale(3, 1 - shapes[minIndex] -> reflectivity, rgb, rgb);
+            vecAdd(3, reflectedRGB, rgb, rgb);
+        }
+        return 0;
+    }
+    return 1;
 }
 
 void launchRays()  {
@@ -186,9 +167,9 @@ void launchRays()  {
             vecSubtract(3, pixPos, camPos, rayDir);
             vecUnit(3, rayDir, rayDir);
 
-            double rgb[3] = {.1,.1,.1};
+            double rgb[3] = {1, 1, 1};
 
-            shootRay(pixPos, rayDir, rgb);
+            shootRay(pixPos, rayDir, rgb, 0);
             pixSetRGB(getScreenCoordX(i), getScreenCoordY(j), rgb[0], rgb[1], rgb[2]);
         }
     }
@@ -218,16 +199,56 @@ void sceneInitialize(double targetPos[3], double targetToScreenDist, double scre
 }
 
 // sets up a sphere, given a radius, center, and shapeIndex in our shape array
-void sphereSetup(double radius, double center[], int shapeIndex)  {
+void sphereSetup(double radius, double center[], int shapeIndex, double color[3], double reflectivity)  {
     shapes[shapeIndex] = sphereMalloc();
-    sphereInit(shapes[shapeIndex], center, radius, 0);
+    sphereInit(shapes[shapeIndex], center, radius, reflectivity, color);
 }
 
 void initializeShapes() {
     double sphere1Radius = 30;
     double sphere1Center[3] = {256, 256, 50};
-    sphereSetup(sphere1Radius, sphere1Center, indexSPHERE1);
+    double sphere1Color[3] = {.2, .8, .1};
+    sphereSetup(sphere1Radius, sphere1Center, indexSPHERE1, sphere1Color, .4);
+
+    // double sphere2Center[3] = {100, 100, 45};
+    double sphere2Radius = 30;
+    double sphere2Center[3] = {250, 256, 20};
+    double sphere2Color[3] = {.5, .8, .8};
+    sphereSetup(sphere2Radius, sphere2Center, indexSPHERE2, sphere2Color, 0);
     sceneInitialize(sphere1Center, sphere1Radius * 2, 500);
+}
+
+// Move camera on arrow keys + shift + option.
+void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
+        int altOptionIsDown, int superCommandIsDown) {
+    switch(key) {
+        double theta = .1;
+        double phi = .1;
+        case 257:
+        break;
+        case 262:  // right
+        modViewDir(0, theta);
+        break;
+        case 263:  // left
+        modViewDir(0, -theta);
+        break;
+        case 264:  // down
+        if(shiftIsDown)  {
+            targetToScreen = targetToScreen - 1;
+        }  else  {
+            modViewDir(-phi, 0);
+        }
+        break;
+        case 265:  // up
+        if(shiftIsDown)  {
+            targetToScreen = targetToScreen + 1;
+        }  else  {
+            modViewDir(phi, 0);
+        }
+        break;
+    }
+    launchRays();
+    printf("we done shot some rays\n");
 }
 
 int main(int argc, const char **argv)  {
@@ -239,4 +260,7 @@ int main(int argc, const char **argv)  {
     pixSetKeyDownHandler(handleKeyDown);
     pixSetKeyRepeatHandler(handleKeyDown);
     pixRun();
+    for (int i = 0; i < 2; ++i)  {
+        sphereDestroy(shapes[i]);
+    }
 }
