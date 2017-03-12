@@ -22,10 +22,11 @@ int projectionType;
 int screenHeight = 512;
 int screenWidth = 512;
 
-int numShapes = 1;
-shape *shapes[1];
+int numShapes = 2;
+shape *shapes[2];
 
 #define indexSPHERE1 0
+#define indexSPHERE2 1
 
 // variables necessary for tracing with the camera
 double target[3];
@@ -162,10 +163,15 @@ int shootRay(double s[3], double d[3], double rgb[3])  {
                     // r = d − 2(d⋅n)n
                     double twodnn[3];
                     double r[3];
-                    double reflectedRGB[3];
+                    double reflectedRGB[3] = {0,0,0};
+                    vecScale(3, 2 * vecDot(3, d, minNormal), minNormal, twodnn);
                     vecSubtract(3, d, twodnn, r);
                     vecUnit(3, r, r);
-                    shootRay(minIntersectLoc, r, reflectedRGB);
+                    double nudgedS[3];
+                    double tinyR[3];
+                    vecScale(3, .01, r, tinyR);
+                    vecAdd(3, minIntersectLoc, tinyR, nudgedS);
+                    shootRay(nudgedS, r, reflectedRGB);
                     vecScale(3, shapes[minIndex] -> reflectivity, reflectedRGB, reflectedRGB);
                     vecScale(3, 1 - shapes[minIndex] -> reflectivity, rgb, rgb);
                     vecAdd(3, reflectedRGB, rgb, rgb);
@@ -186,7 +192,7 @@ void launchRays()  {
             vecSubtract(3, pixPos, camPos, rayDir);
             vecUnit(3, rayDir, rayDir);
 
-            double rgb[3] = {.1,.1,.1};
+            double rgb[3] = {1, 1, 1};
 
             shootRay(pixPos, rayDir, rgb);
             pixSetRGB(getScreenCoordX(i), getScreenCoordY(j), rgb[0], rgb[1], rgb[2]);
@@ -223,15 +229,21 @@ void sceneInitialize(double targetPos[3], double targetToScreenDist, double scre
 }
 
 // sets up a sphere, given a radius, center, and shapeIndex in our shape array
-void sphereSetup(double radius, double center[], int shapeIndex)  {
+void sphereSetup(double radius, double center[], int shapeIndex, double color[3], double reflectivity)  {
     shapes[shapeIndex] = sphereMalloc();
-    sphereInit(shapes[shapeIndex], center, radius, 0);
+    sphereInit(shapes[shapeIndex], center, radius, reflectivity, color);
 }
 
 void initializeShapes() {
     double sphere1Radius = 30;
     double sphere1Center[3] = {256, 256, 50};
-    sphereSetup(sphere1Radius, sphere1Center, indexSPHERE1);
+    double sphere1Color[3] = {.2, .8, .1};
+    sphereSetup(sphere1Radius, sphere1Center, indexSPHERE1, sphere1Color, .4);
+
+    // double sphere2Center[3] = {100, 100, 45};
+    double sphere2Center[3] = {250, 250, 48};
+    double sphere2Color[3] = {.5, .8, .8};
+    sphereSetup(sphere1Radius, sphere2Center, indexSPHERE2, sphere2Color, 1);
     sceneInitialize(sphere1Center, sphere1Radius * 2, 500);
 }
 
@@ -244,4 +256,7 @@ int main(int argc, const char **argv)  {
     pixSetKeyDownHandler(handleKeyDown);
     pixSetKeyRepeatHandler(handleKeyDown);
     pixRun();
+    for (int i = 0; i < 2; ++i)  {
+        sphereDestroy(shapes[i]);
+    }
 }
