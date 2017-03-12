@@ -188,6 +188,7 @@ void sceneInitialize(double targetPos[3], double targetToScreenDist, double scre
     vecToSpherical(viewDir, viewDirSpherical);
     vecToSpherical(lrVec, lrVecSpherical);
     vecToSpherical(udVec, udVecSpherical);
+    modViewDir(0, 0);
     // set targetPos and distances to screen and camera
     target[0] = targetPos[0]; target[1] = targetPos[1]; target[2] = targetPos[2];
     targetToScreen = targetToScreenDist;
@@ -247,6 +248,7 @@ void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
         }
         break;
     }
+    pixClearRGB(0.0, 0.0, 0.0);
     launchRays();
     printf("we done shot some rays\n");
 }
