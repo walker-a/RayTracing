@@ -22,7 +22,7 @@ int projectionType;
 int screenHeight = 512;
 int screenWidth = 512;
 
-int numShapes = 1;
+int numShapes = 2;
 shape *shapes[2];
 
 #define indexSPHERE1 0
@@ -93,7 +93,12 @@ int getScreenCoordY(double coord) {
 // given a starting point, a direction, and a length to go in that direction, find finish point, store in finishPoint
 // dir should be a unit vector
 void getNewPoint(double startPoint[3], double dir[3], double dist, double finishPoint[3]) {
-    double vecScalar = sqrt(dist * dist / (dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2]));
+    double vecScalar;
+    if (dist < 0) {
+        vecScalar = -sqrt(dist * dist / (dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2]));
+    } else {
+        vecScalar = sqrt(dist * dist / (dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2]));
+    }
     double largerVec[3];
     vecScale(3, vecScalar, dir, largerVec);
     vecAdd(3, startPoint, largerVec, finishPoint);
@@ -188,7 +193,6 @@ void sceneInitialize(double targetPos[3], double targetToScreenDist, double scre
     vecToSpherical(viewDir, viewDirSpherical);
     vecToSpherical(lrVec, lrVecSpherical);
     vecToSpherical(udVec, udVecSpherical);
-    modViewDir(0, 0);
     // set targetPos and distances to screen and camera
     target[0] = targetPos[0]; target[1] = targetPos[1]; target[2] = targetPos[2];
     targetToScreen = targetToScreenDist;
@@ -215,7 +219,7 @@ void initializeShapes() {
     double sphere2Radius = 50;
     double sphere2Center[3] = {200, 220, 80};
     double sphere2Color[3] = {.5, .8, .8};
-    // sphereSetup(sphere2Radius, sphere2Center, indexSPHERE2, sphere2Color, 0);
+    sphereSetup(sphere2Radius, sphere2Center, indexSPHERE2, sphere2Color, 0);
     sceneInitialize(sphere2Center, sphere1Radius * 2, 500);
 }
 
