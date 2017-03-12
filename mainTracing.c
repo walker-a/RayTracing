@@ -11,6 +11,7 @@
 #include "matrix.c"
 #include "shapes.c"
 #include "000pixel.h"
+#include "light.c"
 
 #define WIDTH 512
 #define HEIGHT 512
@@ -22,11 +23,15 @@ int projectionType;
 int screenHeight = 512;
 int screenWidth = 512;
 
-int numShapes = 2;
-shape *shapes[2];
+int numShapes = 3;
+shape *shapes[3];
+
+int numLights = 1;
+light *lights[1];
 
 #define indexSPHERE1 0
 #define indexSPHERE2 1
+#define indexSPHERE3 2
 
 // variables necessary for tracing with the camera
 double target[3];
@@ -41,8 +46,9 @@ double lrVec[3];
 double udVec[3];
 double lrVecSpherical[3];
 double udVecSpherical[3];
-double backgroundColor[3] = {0,0,0};
-int maxDepth = 40;
+double backgroundColor[3] = {.1, .1, .1};
+int maxDepth = 8;
+double ambientLight = .2;
 
 
 // converts vector coords to spherical coords
@@ -104,62 +110,74 @@ void getNewPoint(double startPoint[3], double dir[3], double dist, double finish
     vecAdd(3, startPoint, largerVec, finishPoint);
 }
 
-// launches a ray, does neccessary reflection.
-// writes answer to rgb
-// returns 0 on intersection, 1 on no intersection
-int shootRay(double s[3], double d[3], double rgb[3], int depth)  {
-    if(depth >= maxDepth)  {
-        return 2;
-    }
-    double candidateLoc[3];
-    double minIntersectLoc[3];
-    double minIntersectDist = -1;
-    double minNormal[3];
+
+// returns the index in shapes of the first object the ray hits
+// returns -1 otherwise
+int rayIntersect(double s[3], double d[3], double intersection[3], double normal[3])  {
     int minIndex = -1;
     int max = -1;
+    double minIntersectDist = -1;
 
     for (int k = 0; k < numShapes; ++k)  {
         double candidateNormal[3];
+        double candidateLoc[3];
         if(shapes[k] -> intersection(shapes[k], s, d, candidateLoc, candidateNormal) == 0)  {
             double stoCandidateVec[3];
             vecSubtract(3, candidateLoc, s, stoCandidateVec);
             double stoCandidateDist = vecLength(3, stoCandidateVec);
             if(minIntersectDist == -1 || 
                 stoCandidateDist < minIntersectDist)  {
-                vecCopy(3, candidateLoc, minIntersectLoc);
-                vecCopy(3, candidateNormal, minNormal);
+                vecCopy(3, candidateLoc, intersection);
+                vecCopy(3, candidateNormal, normal);
                 minIntersectDist = stoCandidateDist;
                 minIndex = k;
             }
         }
     }
-
-    // if we hit something
-    if(minIndex != -1)  {
-        shapes[minIndex] -> color(shapes[minIndex], minIntersectLoc, rgb);
-
-        // if there's a reflection
-        // if(shapes[minIndex] -> reflectivity > 0)  {
-        //     // r = d − 2(d⋅n)n
-        //     double twodnn[3];
-        //     double r[3];
-        //     double reflectedRGB[3] = {0,0,0};
-        //     vecScale(3, 2 * vecDot(3, d, minNormal), minNormal, twodnn);
-        //     vecSubtract(3, d, twodnn, r);
-        //     vecUnit(3, r, r);
-        //     double nudgedS[3];
-        //     double tinyR[3];
-        //     vecScale(3, .000001, r, tinyR);
-        //     vecAdd(3, minIntersectLoc, tinyR, nudgedS);
-        //     shootRay(nudgedS, r, reflectedRGB, depth + 1);
-        //     vecScale(3, shapes[minIndex] -> reflectivity, reflectedRGB, reflectedRGB);
-        //     vecScale(3, 1 - shapes[minIndex] -> reflectivity, rgb, rgb);
-        //     vecAdd(3, reflectedRGB, rgb, rgb);
-        // }
-    }
-    return minIndex == -1;
+    return minIndex;
 }
 
+// launches a ray, does neccessary reflection.
+// writes answer to rgb
+// returns 0 on intersection, 1 on no intersection
+int shootRay(double s[3], double d[3], double rgb[3], int depth)  {
+    if(depth >= maxDepth)  {
+        return 4;
+    }
+
+    double intersectLoc[3];
+    double normal[3];
+
+    int minIndex = rayIntersect(s, d, intersectLoc, normal);
+
+    if(minIndex == -1)  {
+        return 0;
+    }
+    // if we hit something
+    shapes[minIndex] -> color(shapes[minIndex], intersectLoc, rgb);
+
+    // if there's a reflection
+    if(shapes[minIndex] -> reflectivity > 0)  {
+        // r = d − 2(d⋅n)n
+        double twodnn[3];
+        double r[3];
+        double reflectedRGB[3] = {0,0,0};
+        vecScale(3, 2 * vecDot(3, d, normal), normal, twodnn);
+        vecSubtract(3, d, twodnn, r);
+        vecUnit(3, r, r);
+        double nudgedS[3];
+        double tinyR[3];
+        vecScale(3, .000001, r, tinyR);
+        vecAdd(3, intersectLoc, tinyR, nudgedS);
+        shootRay(nudgedS, r, reflectedRGB, depth + 1);
+        vecScale(3, shapes[minIndex] -> reflectivity, reflectedRGB, reflectedRGB);
+        vecScale(3, 1 - shapes[minIndex] -> reflectivity, rgb, rgb);
+        vecAdd(3, reflectedRGB, rgb, rgb);
+    }
+    return minIndex;
+}
+
+// launches all the rays, one for each pixel
 void launchRays()  {
     double pixPos[3];
     double pixPosFinal[3];
@@ -172,7 +190,8 @@ void launchRays()  {
             vecSubtract(3, pixPosFinal, camPos, rayDir);
             vecUnit(3, rayDir, rayDir);
 
-            double rgb[3] = {1, 1, 1};
+            double rgb[3];
+            vecCopy(3, backgroundColor, rgb);
 
             shootRay(pixPosFinal, rayDir, rgb, 0);
             pixSetRGB(getScreenCoordX(i), getScreenCoordY(j), rgb[0], rgb[1], rgb[2]);
@@ -209,17 +228,23 @@ void sphereSetup(double radius, double center[], int shapeIndex, double color[3]
     sphereInit(shapes[shapeIndex], center, radius, reflectivity, color);
 }
 
+// sets up our shapes, which are currently three circles
 void initializeShapes() {
     double sphere1Radius = 30;
     double sphere1Center[3] = {256, 256, 50};
     double sphere1Color[3] = {.2, .8, .1};
     sphereSetup(sphere1Radius, sphere1Center, indexSPHERE1, sphere1Color, .4);
 
-    // double sphere2Center[3] = {100, 100, 45};
     double sphere2Radius = 50;
-    double sphere2Center[3] = {200, 220, 80};
+    double sphere2Center[3] = {180, 170, 80};
     double sphere2Color[3] = {.5, .8, .8};
-    sphereSetup(sphere2Radius, sphere2Center, indexSPHERE2, sphere2Color, 0);
+    sphereSetup(sphere2Radius, sphere2Center, indexSPHERE2, sphere2Color, .3);
+
+    double sphere3Radius = 50;
+    double sphere3Center[3] = {130, 300, 40};
+    double sphere3Color[3] = {.2, .5, .6};
+    sphereSetup(sphere3Radius, sphere3Center, indexSPHERE3, sphere3Color, .3);
+
     sceneInitialize(sphere2Center, sphere1Radius * 2, 500);
 }
 
@@ -254,9 +279,17 @@ void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
         default:
         return;
     }
-    pixClearRGB(0.0, 0.0, 0.0);
+    pixClearRGB(backgroundColor[0], backgroundColor[1], backgroundColor[2]);
     launchRays();
     printf("we done shot some rays\n");
+}
+
+// sets up our lights
+void initializeLights()  {
+    lights[0] = malloc(sizeof(light));
+    double color[3] = {1,1,1};
+    double pos[3] =   {0,0,0};
+    lightInit(lights[0], color, pos);
 }
 
 int main(int argc, const char **argv)  {
