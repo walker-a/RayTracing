@@ -22,7 +22,7 @@ int projectionType;
 int screenHeight = 512;
 int screenWidth = 512;
 
-int numShapes = 2;
+int numShapes = 1;
 shape *shapes[2];
 
 #define indexSPHERE1 0
@@ -42,7 +42,7 @@ double udVec[3];
 double lrVecSpherical[3];
 double udVecSpherical[3];
 double backgroundColor[3] = {0,0,0};
-int maxDepth = 4;
+int maxDepth = 40;
 
 
 // converts vector coords to spherical coords
@@ -134,42 +134,42 @@ int shootRay(double s[3], double d[3], double rgb[3], int depth)  {
         shapes[minIndex] -> color(shapes[minIndex], minIntersectLoc, rgb);
 
         // if there's a reflection
-        if(shapes[minIndex] -> reflectivity > 0)  {
-            // r = d − 2(d⋅n)n
-            double twodnn[3];
-            double r[3];
-            double reflectedRGB[3] = {0,0,0};
-            vecScale(3, 2 * vecDot(3, d, minNormal), minNormal, twodnn);
-            vecSubtract(3, d, twodnn, r);
-            vecUnit(3, r, r);
-            double nudgedS[3];
-            double tinyR[3];
-            vecScale(3, .01, r, tinyR);
-            vecAdd(3, minIntersectLoc, tinyR, nudgedS);
-            shootRay(nudgedS, r, reflectedRGB, depth + 1);
-            vecScale(3, shapes[minIndex] -> reflectivity, reflectedRGB, reflectedRGB);
-            vecScale(3, 1 - shapes[minIndex] -> reflectivity, rgb, rgb);
-            vecAdd(3, reflectedRGB, rgb, rgb);
-        }
-        return 0;
+        // if(shapes[minIndex] -> reflectivity > 0)  {
+        //     // r = d − 2(d⋅n)n
+        //     double twodnn[3];
+        //     double r[3];
+        //     double reflectedRGB[3] = {0,0,0};
+        //     vecScale(3, 2 * vecDot(3, d, minNormal), minNormal, twodnn);
+        //     vecSubtract(3, d, twodnn, r);
+        //     vecUnit(3, r, r);
+        //     double nudgedS[3];
+        //     double tinyR[3];
+        //     vecScale(3, .000001, r, tinyR);
+        //     vecAdd(3, minIntersectLoc, tinyR, nudgedS);
+        //     shootRay(nudgedS, r, reflectedRGB, depth + 1);
+        //     vecScale(3, shapes[minIndex] -> reflectivity, reflectedRGB, reflectedRGB);
+        //     vecScale(3, 1 - shapes[minIndex] -> reflectivity, rgb, rgb);
+        //     vecAdd(3, reflectedRGB, rgb, rgb);
+        // }
     }
-    return 1;
+    return minIndex == -1;
 }
 
 void launchRays()  {
     double pixPos[3];
+    double pixPosFinal[3];
     for (int i = -screenWidth / 2; i < screenWidth / 2; i++) {
         for (int j = -screenHeight / 2; j < screenHeight / 2; j++) {
             getNewPoint(screenCenter, lrVec, i, pixPos);
-            getNewPoint(pixPos, udVec, j, pixPos);
+            getNewPoint(pixPos, udVec, j, pixPosFinal);
             
             double rayDir[3];
-            vecSubtract(3, pixPos, camPos, rayDir);
+            vecSubtract(3, pixPosFinal, camPos, rayDir);
             vecUnit(3, rayDir, rayDir);
 
             double rgb[3] = {1, 1, 1};
 
-            shootRay(pixPos, rayDir, rgb, 0);
+            shootRay(pixPosFinal, rayDir, rgb, 0);
             pixSetRGB(getScreenCoordX(i), getScreenCoordY(j), rgb[0], rgb[1], rgb[2]);
         }
     }
@@ -212,11 +212,11 @@ void initializeShapes() {
     sphereSetup(sphere1Radius, sphere1Center, indexSPHERE1, sphere1Color, .4);
 
     // double sphere2Center[3] = {100, 100, 45};
-    double sphere2Radius = 30;
-    double sphere2Center[3] = {250, 256, 20};
+    double sphere2Radius = 50;
+    double sphere2Center[3] = {200, 220, 80};
     double sphere2Color[3] = {.5, .8, .8};
-    sphereSetup(sphere2Radius, sphere2Center, indexSPHERE2, sphere2Color, 0);
-    sceneInitialize(sphere1Center, sphere1Radius * 2, 500);
+    // sphereSetup(sphere2Radius, sphere2Center, indexSPHERE2, sphere2Color, 0);
+    sceneInitialize(sphere2Center, sphere1Radius * 2, 500);
 }
 
 // Move camera on arrow keys + shift + option.
@@ -235,18 +235,20 @@ void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
         break;
         case 264:  // down
         if(shiftIsDown)  {
-            targetToScreen = targetToScreen - 1;
+            targetToScreen--;
         }  else  {
             modViewDir(-phi, 0);
         }
         break;
         case 265:  // up
         if(shiftIsDown)  {
-            targetToScreen = targetToScreen + 1;
+            targetToScreen++;
         }  else  {
             modViewDir(phi, 0);
         }
         break;
+        default:
+        return;
     }
     pixClearRGB(0.0, 0.0, 0.0);
     launchRays();
@@ -259,6 +261,7 @@ int main(int argc, const char **argv)  {
     pixClearRGB(0.0, 0.0, 0.0);
     initializeShapes();
     launchRays();
+    printf("we done shot some rays\n");
     pixSetKeyDownHandler(handleKeyDown);
     pixSetKeyRepeatHandler(handleKeyDown);
     pixRun();
