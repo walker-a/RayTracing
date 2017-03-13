@@ -49,7 +49,7 @@ double udVec[3];
 double lrVecSpherical[3];
 double udVecSpherical[3];
 double backgroundColor[3] = {.1, .1, .1};
-int maxDepth = 8;
+int maxDepth = 800;
 double ambientLight = 0;
 
 double transPhiView;
@@ -177,11 +177,12 @@ void reflection(shape *contact, double s[3], double d[3], double normal[3], doub
     vecUnit(3, r, r);
     double nudgedS[3];
     vecNudge(s, r, nudgedS);
-    shootRay(nudgedS, r, reflectedRGB, depth + 1);
-    vecScale(3, contact -> reflectivity, reflectedRGB, reflectedRGB);
-    double scaledRGB[3];
-    vecScale(3, 1 - contact -> reflectivity, rgb, scaledRGB);
-    vecAdd(3, reflectedRGB, scaledRGB, out);
+    if (shootRay(nudgedS, r, reflectedRGB, depth + 1) > 0) {
+        vecScale(3, contact -> reflectivity, reflectedRGB, reflectedRGB);
+        double scaledRGB[3];
+        vecScale(3, 1 - contact -> reflectivity, rgb, scaledRGB);
+        vecAdd(3, reflectedRGB, scaledRGB, out);
+    }
 }
 
 int lighting(shape *contact, double s[3], double intersectLoc[3], double normal[3], double surfaceCol[3], double rgb[3])  {
@@ -191,6 +192,7 @@ int lighting(shape *contact, double s[3], double intersectLoc[3], double normal[
         double rayDir[3];
         double nudgedIntersect[3];
         vecSubtract(3, lights[i] -> loc, intersectLoc, rayDir);
+        vecUnit(3, rayDir, rayDir);
         vecNudge(intersectLoc, rayDir, nudgedIntersect);
         double _[3];
 
@@ -199,10 +201,10 @@ int lighting(shape *contact, double s[3], double intersectLoc[3], double normal[
         if(intersect == -1)  {
             numUsedLights++;
             double dirToLight[3];
-            vecSubtract(3, intersectLoc, lights[i] -> loc, dirToLight);
+            vecSubtract(3, lights[i] -> loc, intersectLoc, dirToLight);
             vecUnit(3, dirToLight, dirToLight);
             double diffInt = vecDot(3, dirToLight, normal);
-            diffInt = diffInt < 0? -diffInt: diffInt;
+            diffInt = diffInt < 0? 0: diffInt;
             double lightColor[3];
             vecZipWithMultiply(3, lights[i] -> color, surfaceCol, lightColor);
             vecScale(3, diffInt, lightColor, lightColor);
@@ -241,14 +243,14 @@ int shootRay(double s[3], double d[3], double rgbFinal[3], int depth)  {
     // vecScale(3, ambientLight, rgb, rgbAmbient);
     // vecAdd(3, rgbAmbient, rgbFinal, rgbFinal);
 
-    // double reflectionRGB[3] = {0, 0, 0};
+    double reflectionRGB[3] = {0, 0, 0};
 
-    // // reflection calculations
-    // if(contact -> reflectivity > 0)  {
-    //         reflection(contact, s, d, normal, rgb, reflectionRGB, depth);
-    //         vecAdd(3, reflectionRGB, rgbFinal, rgbFinal);
-    //         fflush(stdout);
-    // }
+    // reflection calculations
+    if(contact -> reflectivity > 0)  {
+            reflection(contact, s, d, normal, rgb, reflectionRGB, depth);
+            vecAdd(3, reflectionRGB, rgbFinal, rgbFinal);
+            // fflush(stdout);
+    }
 
 
     // point lighting calculations
@@ -367,7 +369,7 @@ void initializeShapes() {
     double sphere1Radius = 30;
     double sphere1Center[3] = {256, 256, 50};
     double sphere1Color[3] = {.2, .8, .1};
-    sphereSetup(sphere1Radius, sphere1Center, indexSPHERE1, sphere1Color, .4);
+    sphereSetup(sphere1Radius, sphere1Center, indexSPHERE1, sphere1Color, .3);
 
     double sphere2Radius = 50;
     double sphere2Center[3] = {180, 170, 80};
@@ -427,7 +429,7 @@ void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
 void initializeLights()  {
     lights[0] = malloc(sizeof(light));
     double color[3] = {1,1,1};
-    double pos[3] =   {200, 200, -500};
+    double pos[3] =   {0, 512, -100};
     lightInit(lights[0], color, pos);
 }
 
