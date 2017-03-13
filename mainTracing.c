@@ -7,6 +7,7 @@
 
 #include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include "vector.c"
 #include "matrix.c"
 #include "shapes.c"
@@ -48,7 +49,9 @@ double lrVecSpherical[3];
 double udVecSpherical[3];
 double backgroundColor[3] = {.1, .1, .1};
 int maxDepth = 8;
-double ambientLight = .2;
+double ambientLight = .0;
+
+int once;
 
 
 // converts vector coords to spherical coords
@@ -137,43 +140,114 @@ int rayIntersect(double s[3], double d[3], double intersection[3], double normal
     return minIndex;
 }
 
+// nudges orig in direction, writes to result
+void vecNudge(double orig[3], double direction[3], double result[3])  {
+    double tinyDir[3];
+    vecScale(3, .000001, direction, tinyDir);
+    vecAdd(3, orig, tinyDir, result);
+}
+
+// same as haskell zipWith (*)
+void vecZipWithMultiply(int length, double *a, double *b, double *result)  {
+    for (int i = 0; i < length; ++i)  {
+        result[i] = a[i] * b[i];
+    }
+}
+
+int shootRay(double s[3], double d[3], double rgbFinal[3], int depth);
+
+// handles the reflection
+// r = d − 2(d⋅n)n
+void reflection(shape *contact, double s[3], double d[3], double rgb[3], double normal[3], int depth)  {
+    double twodnn[3];
+    double r[3];
+    double reflectedRGB[3] = {0,0,0};
+    vecScale(3, 2 * vecDot(3, d, normal), normal, twodnn);
+    vecSubtract(3, d, twodnn, r);
+    vecUnit(3, r, r);
+    double nudgedS[3];
+    vecNudge(s, r, nudgedS);
+    shootRay(nudgedS, r, reflectedRGB, depth + 1);
+    vecScale(3, contact -> reflectivity, reflectedRGB, reflectedRGB);
+    vecScale(3, 1 - contact -> reflectivity, rgb, rgb);
+    vecAdd(3, reflectedRGB, rgb, rgb);
+}
+
+int lighting(shape *contact, double s[3], double intersectLoc[3], double surfaceCol[3], double rgb[3])  {
+    int numUsedLights = 0;
+    for (int i = 0; i < numLights; ++i)  {
+        double rayDir[3];
+        double nudgedIntersect[3];
+        vecSubtract(3, lights[i] -> loc, intersectLoc, rayDir);
+        vecNudge(intersectLoc, rayDir, nudgedIntersect);
+        double _[3];
+
+        // if nothing's blocking our shadow ray
+        int intersect = rayIntersect(nudgedIntersect, rayDir, _, _);
+        if(intersect == -1)  {
+            printf("in\n");
+            numUsedLights++;
+            double dirToLight[3];
+            vecSubtract(3, intersectLoc, lights[i] -> loc, dirToLight);
+            vecUnit(3, dirToLight, dirToLight);
+            double dirToCam[3];
+            vecSubtract(3, intersectLoc, s, dirToCam);
+            vecUnit(3, dirToCam, dirToCam);
+            double angle = acos(vecDot(3, dirToLight, dirToCam))/ (2 * M_PI);
+            double lightColor[3];
+            vecZipWithMultiply(3, lights[i] -> color, surfaceCol, lightColor);
+            vecScale(3, angle, lightColor, lightColor);
+            vecAdd(3, lightColor, rgb, rgb);
+        }
+        return intersect;
+    }
+    return -1;
+}
+
 // launches a ray, does neccessary reflection.
 // writes answer to rgb
 // returns 0 on intersection, 1 on no intersection
-int shootRay(double s[3], double d[3], double rgb[3], int depth)  {
-    if(depth >= maxDepth)  {
+int shootRay(double s[3], double d[3], double rgbFinal[3], int depth)  {
+    if(depth >= maxDepth)
         return 4;
-    }
+
+    double black[3] = {0, 0, 0};
+    vecCopy(3, black, rgbFinal);
 
     double intersectLoc[3];
     double normal[3];
 
     int minIndex = rayIntersect(s, d, intersectLoc, normal);
 
+    // exit if we didn't hit anything
     if(minIndex == -1)  {
         return 0;
     }
-    // if we hit something
-    shapes[minIndex] -> color(shapes[minIndex], intersectLoc, rgb);
+    shape *contact = shapes[minIndex];
+    double rgb[3];
+    contact -> color(shapes[minIndex], intersectLoc, rgb);
 
-    // if there's a reflection
-    if(shapes[minIndex] -> reflectivity > 0)  {
-        // r = d − 2(d⋅n)n
-        double twodnn[3];
-        double r[3];
-        double reflectedRGB[3] = {0,0,0};
-        vecScale(3, 2 * vecDot(3, d, normal), normal, twodnn);
-        vecSubtract(3, d, twodnn, r);
-        vecUnit(3, r, r);
-        double nudgedS[3];
-        double tinyR[3];
-        vecScale(3, .000001, r, tinyR);
-        vecAdd(3, intersectLoc, tinyR, nudgedS);
-        shootRay(nudgedS, r, reflectedRGB, depth + 1);
-        vecScale(3, shapes[minIndex] -> reflectivity, reflectedRGB, reflectedRGB);
-        vecScale(3, 1 - shapes[minIndex] -> reflectivity, rgb, rgb);
-        vecAdd(3, reflectedRGB, rgb, rgb);
+    // reflection calculations
+    if(contact -> reflectivity > 0)
+        reflection(contact, s, d, normal, rgb, depth);
+
+    // ambient lighting calculations
+    double rgbAmbient[3];
+    vecScale(3, ambientLight, rgb, rgbAmbient);
+    vecAdd(3, rgbAmbient, rgbFinal, rgbFinal);
+
+    // point lighting calculations
+    double lightingRGB[3] = {0,0,0};
+    if (lighting(contact, s, intersectLoc, rgb, lightingRGB) == minIndex)  {
+        printf("oops\n");
     }
+
+    // if(once && vecDot(3, lightingRGB, lightingRGB) != 0)  {
+    //     once = 0;
+    //     vecPrint(3, lightingRGB);
+    //     printf("uhhh\n");
+    // }
+
     return minIndex;
 }
 
@@ -213,7 +287,7 @@ void sceneInitialize(double targetPos[3], double targetToScreenDist, double scre
     vecToSpherical(lrVec, lrVecSpherical);
     vecToSpherical(udVec, udVecSpherical);
     // set targetPos and distances to screen and camera
-    target[0] = targetPos[0]; target[1] = targetPos[1]; target[2] = targetPos[2];
+    vecCopy(3, targetPos, target);
     targetToScreen = targetToScreenDist;
     screenToCam = screenToCamDist;
     //calculating screen center point
@@ -281,28 +355,32 @@ void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
     }
     pixClearRGB(backgroundColor[0], backgroundColor[1], backgroundColor[2]);
     launchRays();
-    printf("we done shot some rays\n");
 }
 
 // sets up our lights
 void initializeLights()  {
     lights[0] = malloc(sizeof(light));
-    double color[3] = {1,1,1};
-    double pos[3] =   {0,0,0};
+    double color[3] = {1000,1000,1000};
+    double pos[3] =   {256,256,256};
     lightInit(lights[0], color, pos);
 }
 
 int main(int argc, const char **argv)  {
+    once = 0;
+    // if(argc > 0)  {
+    //     ambientLight = atof(argv[0]);
+    //     maxDepth = atoi(argv[1]);
+    // }
     projectionType = PERSPECTIVE;
     pixInitialize(WIDTH, HEIGHT, "ray tracing");
     pixClearRGB(0.0, 0.0, 0.0);
     initializeShapes();
+    initializeLights();
     launchRays();
-    printf("we done shot some rays\n");
     pixSetKeyDownHandler(handleKeyDown);
     pixSetKeyRepeatHandler(handleKeyDown);
     pixRun();
-    for (int i = 0; i < 2; ++i)  {
+    for (int i = 0; i < numShapes; ++i)  {
         sphereDestroy(shapes[i]);
     }
 }

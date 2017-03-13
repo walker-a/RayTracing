@@ -2,6 +2,18 @@
 #include <stdarg.h>
 /*** In general dimensions ***/
 
+void vecPrint(int dim, double v[])  {
+    if(dim == 0)  {
+        printf("[]\n");
+        return;
+    }
+    printf("[");
+    for (int i = 0; i < dim - 1; ++i)  {
+        printf("%f, ", v[i]);
+    }
+    printf("%f]\n", v[dim - 1]);
+}
+
 /* Copies the dim-dimensional vector v to the dim-dimensional vector copy. */
 void vecCopy(int dim, double v[], double copy[]) {
     for (int i = 0; i < dim; ++i)  {
@@ -16,7 +28,7 @@ void vecAdd(int dim, double v[], double w[], double vPlusW[]) {
     }
 }
 
-/* Subtracts the dim-dimensional vectors v and w. */
+/* Subtracts the dim-dimensional vectors v - w. */
 void vecSubtract(int dim, double v[], double w[], double vMinusW[]) {
     for (int i = 0; i < dim; ++i)  {
         vMinusW[i] = v[i] - w[i];
