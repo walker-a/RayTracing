@@ -1,11 +1,11 @@
-typedef struct shape{
+typedef struct shape  {
     double* unif;
     int unifDim;
     int (*intersection)(struct shape*, double[3], double[3], double[3], double[3]);
     void (*color)(struct shape*, double[3], double[3]);
     // fraction of light that should be reflected
     double reflectivity;
-}shape;
+} shape;
 
 // returns 0 on success (real results), 1 on faliure (comples results)
 int quadraticFormula (double results[2], double a, double b, double c)  {
@@ -42,7 +42,6 @@ int sphereIntersect(shape *sphere, double s[3], double d[3], double intersectLoc
     quadResults[0] = -vdotd + sqrtResults;
     quadResults[1] = -vdotd - sqrtResults;
     double t = quadResults[1] >= 0? quadResults[1]: quadResults[0];
-    t = quadResults[1];
     if(t < 0)  {
         return 2;
     }
