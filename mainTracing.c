@@ -51,13 +51,6 @@ double backgroundColor[3] = {.1, .1, .1};
 int maxDepth = 8;
 double ambientLight = 1;
 
-double transPhiView;
-double transThetaView;
-double transPhiLR;
-double transThetaLR;
-double transPhiUD;
-double transThetaUD;
-
 int once;
 
 
@@ -77,23 +70,23 @@ void sphericalToVec(double spherical[3], double vec[3]) {
     vec[2] = spherical[0] * cos(spherical[1]);
 }
 
-void modVec(double phi, double theta, double vec[3]) {
-    double spherical[3] = {1, phi, theta};
-    sphericalToVec(spherical, vec);
-}
-
-// adds new phi and theta values to viewDir, lrVec, and udVec
-void modDirVecs(double phi, double theta) {
-    transPhiView += phi;
-    transThetaView += theta;
-    transPhiUD = transPhiView - M_PI / 2;
-    transThetaUD = transThetaView;
-//    transPhiLR = transPhiView - M_PI / 2; //This one is the tricky one
-    transThetaLR = transThetaView + M_PI / 2;
-    modVec(transPhiView, transThetaView, viewDir);
-    modVec(transPhiLR, transThetaLR, lrVec);
-    modVec(transPhiUD, transThetaUD, udVec);
+void rotateView(double theta, double axis[3]) {
+    double rot[3][3];
+    double tempView[3];
+    double tempLR[3];
+    double tempUD[3];
+    vecCopy(3, viewDir, tempView);
+    vecCopy(3, lrVec, tempLR);
+    vecCopy(3, udVec, tempUD);
+    mat33AngleAxisRotation(theta, axis, rot);
+    mat331Multiply(rot, tempView, viewDir);
+    mat331Multiply(rot, tempLR, lrVec);
+    mat331Multiply(rot, tempUD, udVec);
+    vecUnit(3, viewDir, viewDir);
+    vecUnit(3, lrVec, lrVec);
+    vecUnit(3, udVec, udVec);
     printf("DOT PRODUCTS (should always be 0): %f, %f, %f\n", vecDot(3, viewDir, lrVec), vecDot(3, viewDir, udVec), vecDot(3, udVec, lrVec));
+
 }
 
 int getScreenCoordX(double coord) {
@@ -286,60 +279,12 @@ void launchRays()  {
 // call after initializeShapes()
 void sceneInitialize(double targetPos[3], double targetToScreenDist, double screenToCamDist) {
     // defining vector directions for screen plane
-//    viewDir[0] = 0; viewDir[1] = 0; viewDir[2] = -1;
-//    lrVec[0] = 0; lrVec[1] = 1; lrVec[2] = 0;
-//    udVec[0] = 1; udVec[1] = 0; udVec[2] = 0;
-//    vecUnit(3, viewDir, viewDir);
-//    vecUnit(3, lrVec, lrVec);
-//    vecUnit(3, udVec, udVec);
-//    vecToSpherical(viewDir, viewDirSpherical);
-//    vecToSpherical(lrVec, lrVecSpherical);
-//    vecToSpherical(udVec, udVecSpherical);
-//    printf("viewDirSpherical: %f, %f, %f\n", viewDirSpherical[0], viewDirSpherical[1], viewDirSpherical[2]);
-//    printf("lrVecSpherical: %f, %f, %f\n", lrVecSpherical[0], lrVecSpherical[1], lrVecSpherical[2]);
-//    printf("udVecSpherical: %f, %f, %f\n", udVecSpherical[0], udVecSpherical[1], udVecSpherical[2]);
-    printf("-----TEST-----\n\n");
-    double vec1[3];
-    double vec2[3];
-    double vec3[3];
-    double testVec1[3] = {1, 0, 0};
-    double testVec2[3] = {1, M_PI / 2, 0};
-    double testVec3[3] = {1, M_PI / 2, M_PI / 2};
-    sphericalToVec(testVec1, vec1);
-    sphericalToVec(testVec2, vec2);
-    sphericalToVec(testVec3, vec3);
-    printf("vec1: %f, %f, %f\n", vec1[0], vec1[1], vec1[2]);
-    printf("vec2: %f, %f, %f\n", vec2[0], vec2[1], vec2[2]);
-    printf("vec3: %f, %f, %f\n", vec3[0], vec3[1], vec3[2]);
-    printf("DOT PRODUCTS (should always be 0): %f, %f, %f\n", vecDot(3, vec1, vec2), vecDot(3, vec1, vec3),
-           vecDot(3, vec2, vec3));
-    
-    printf("-----TEST END-----\n\n");
-
-    
-    
-    
-    
-    viewDirSpherical[0] = 1; viewDirSpherical[1] = M_PI; viewDirSpherical[2] = 0;
-    lrVecSpherical[0] = 1; lrVecSpherical[1] = M_PI / 2; lrVecSpherical[2] = M_PI / 2;
-    udVecSpherical[0] = 1; udVecSpherical[1] = M_PI / 2; udVecSpherical[2] = 0;
-    sphericalToVec(viewDirSpherical, viewDir);
-    sphericalToVec(lrVecSpherical, lrVec);
-    sphericalToVec(udVecSpherical, udVec);
+    viewDir[0] = 0; viewDir[1] = 0; viewDir[2] = -1;
+    lrVec[0] = 0; lrVec[1] = 1; lrVec[2] = 0;
+    udVec[0] = 1; udVec[1] = 0; udVec[2] = 0;
     vecUnit(3, viewDir, viewDir);
     vecUnit(3, lrVec, lrVec);
     vecUnit(3, udVec, udVec);
-    transPhiView = M_PI;
-    transThetaView = 0;
-    transPhiLR = M_PI / 2;
-    transThetaLR = M_PI / 2;
-    transPhiUD = M_PI / 2;
-    transThetaUD = 0;
-    printf("viewDirSpherical: %f, %f, %f\n", viewDirSpherical[0], viewDirSpherical[1], viewDirSpherical[2]);
-    printf("lrVecSpherical: %f, %f, %f\n", lrVecSpherical[0], lrVecSpherical[1], lrVecSpherical[2]);
-    printf("udVecSpherical: %f, %f, %f\n", udVecSpherical[0], udVecSpherical[1], udVecSpherical[2]);
-    printf("DOT PRODUCTS (should always be 0): %f, %f, %f\n", vecDot(3, viewDir, lrVec), vecDot(3, viewDir, udVec), vecDot(3, udVec, lrVec));
-
 
     // set targetPos and distances to screen and camera
     vecCopy(3, targetPos, target);
@@ -380,29 +325,28 @@ void initializeShapes() {
 // Move camera on arrow keys + shift + option.
 void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
         int altOptionIsDown, int superCommandIsDown) {
-    double adjustPhi = 3.14 / 16;
     double adjustTheta = 3.14 / 16;
     switch(key) {
         case 257:
         break;
         case 262:  // right
-        modDirVecs(0, adjustTheta);
+        rotateView(adjustTheta, udVec);
         break;
         case 263:  // left
-        modDirVecs(0, -adjustTheta);
+        rotateView(-adjustTheta, udVec);
         break;
         case 264:  // down
         if(shiftIsDown)  {
             targetToScreen--;
         }  else  {
-            modDirVecs(-adjustPhi, 0);
+            rotateView(-adjustTheta, lrVec);
         }
         break;
         case 265:  // up
         if(shiftIsDown)  {
             targetToScreen++;
         }  else  {
-            modDirVecs(-adjustPhi, 0);
+            rotateView(adjustTheta, lrVec);
         }
         break;
         default:

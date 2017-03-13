@@ -116,20 +116,19 @@ void mat33Transpose(double m[3][3], double transM[3][3]) {
 rotation matrix for the rotation about that axis through that angle. Based on 
 Rodrigues' rotation formula R = I + (sin theta) U + (1 - cos theta) U^2. */
 void mat33AngleAxisRotation(double theta, double axis[3], double rot[3][3]) {
-    double u[3][3] = {{       0, -axis[2],  axis[1]},
-                      { axis[2],        0, -axis[0]},
-                      {-axis[1],  axis[0],        0}};
+    double sint = sin(theta);
+    double cost = cos(theta);
+    double x = axis[0];
+    double y = axis[1];
+    double z = axis[2];
     
-    double uSquared[3][3];
-    mat333Multiply(u, u, uSquared);
-    
-    double identity[3][3] = {{1, 0, 0},
-                             {0, 1, 0},
-                             {0, 0, 1}};
+    double rotMat[3][3] = {{cost + x * x * (1 - cost), x * y * (1 - cost) - z * sint, x * z * (1 - cost) + y * sint},
+                           {y * x * (1 - cost) + z * sint, cost + y * y * (1 - cost), y * z * (1 - cost) + x * sint},
+                           {z * x * (1 - cost) + y * sint, z * y * (1 - cost) - x * sint, cost + z * z * (1 - cost)}};
     
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
-            rot[i][j] = identity[i][j] + sin(theta) * u[i][j] + (1 - cos(theta)) * uSquared[i][j];
+            rot[i][j] = rotMat[i][j];
         }
     }
 }
