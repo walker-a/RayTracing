@@ -225,7 +225,7 @@ int shootRay(double s[3], double d[3], double rgbFinal[3], int depth)  {
     }
     shape *contact = shapes[minIndex];
     double rgb[3];
-    contact -> color(shapes[minIndex], intersectLoc, rgb);
+    contact -> color(contact, intersectLoc, rgb);
 
     // reflection calculations
     if(contact -> reflectivity > 0)
