@@ -25,7 +25,7 @@ int screenHeight = 512;
 int screenWidth = 512;
 
 int numShapes = 3;
-shape *shapes[3];
+shape *shapes[4];
 
 int numLights = 1;
 light *lights[1];
@@ -33,6 +33,7 @@ light *lights[1];
 #define indexSPHERE1 0
 #define indexSPHERE2 1
 #define indexSPHERE3 2
+#define indexSPHERE4 3
 
 // variables necessary for tracing with the camera
 double target[3];
@@ -49,7 +50,7 @@ double lrVecSpherical[3];
 double udVecSpherical[3];
 double backgroundColor[3] = {.1, .1, .1};
 int maxDepth = 8;
-double ambientLight = 1;
+double ambientLight = 0;
 
 double transPhiView;
 double transThetaView;
@@ -167,7 +168,7 @@ int shootRay(double s[3], double d[3], double rgbFinal[3], int depth);
 
 // handles the reflection
 // r = d − 2(d⋅n)n
-void reflection(shape *contact, double s[3], double d[3], double rgb[3], double normal[3], int depth)  {
+void reflection(shape *contact, double s[3], double d[3], double normal[3], double rgb[3], double out[3], int depth)  {
     double twodnn[3];
     double r[3];
     double reflectedRGB[3] = {0,0,0};
@@ -178,12 +179,14 @@ void reflection(shape *contact, double s[3], double d[3], double rgb[3], double 
     vecNudge(s, r, nudgedS);
     shootRay(nudgedS, r, reflectedRGB, depth + 1);
     vecScale(3, contact -> reflectivity, reflectedRGB, reflectedRGB);
-    vecScale(3, 1 - contact -> reflectivity, rgb, rgb);
-    vecAdd(3, reflectedRGB, rgb, rgb);
+    double scaledRGB[3];
+    vecScale(3, 1 - contact -> reflectivity, rgb, scaledRGB);
+    vecAdd(3, reflectedRGB, scaledRGB, out);
 }
 
-int lighting(shape *contact, double s[3], double intersectLoc[3], double surfaceCol[3], double rgb[3])  {
+int lighting(shape *contact, double s[3], double intersectLoc[3], double normal[3], double surfaceCol[3], double rgb[3])  {
     int numUsedLights = 0;
+    int intersect = -1;
     for (int i = 0; i < numLights; ++i)  {
         double rayDir[3];
         double nudgedIntersect[3];
@@ -192,25 +195,21 @@ int lighting(shape *contact, double s[3], double intersectLoc[3], double surface
         double _[3];
 
         // if nothing's blocking our shadow ray
-        int intersect = rayIntersect(nudgedIntersect, rayDir, _, _);
+        intersect = rayIntersect(nudgedIntersect, rayDir, _, _);
         if(intersect == -1)  {
-            //printf("in\n");
             numUsedLights++;
             double dirToLight[3];
             vecSubtract(3, intersectLoc, lights[i] -> loc, dirToLight);
             vecUnit(3, dirToLight, dirToLight);
-            double dirToCam[3];
-            vecSubtract(3, intersectLoc, s, dirToCam);
-            vecUnit(3, dirToCam, dirToCam);
-            double angle = acos(vecDot(3, dirToLight, dirToCam))/ (2 * M_PI);
+            double diffInt = vecDot(3, dirToLight, normal);
+            diffInt = diffInt < 0? -diffInt: diffInt;
             double lightColor[3];
             vecZipWithMultiply(3, lights[i] -> color, surfaceCol, lightColor);
-            vecScale(3, angle, lightColor, lightColor);
+            vecScale(3, diffInt, lightColor, lightColor);
             vecAdd(3, lightColor, rgb, rgb);
         }
-        return intersect;
     }
-    return -1;
+    return intersect;
 }
 
 // launches a ray, does neccessary reflection.
@@ -232,30 +231,36 @@ int shootRay(double s[3], double d[3], double rgbFinal[3], int depth)  {
     if(minIndex == -1)  {
         return 0;
     }
+
     shape *contact = shapes[minIndex];
-    double rgb[3];
+    double rgb[3] = {0,0,0};
     contact -> color(contact, intersectLoc, rgb);
 
-    // reflection calculations
-    if(contact -> reflectivity > 0)
-        reflection(contact, s, d, normal, rgb, depth);
-
     // ambient lighting calculations
-    double rgbAmbient[3];
-    vecScale(3, ambientLight, rgb, rgbAmbient);
-    vecAdd(3, rgbAmbient, rgbFinal, rgbFinal);
+    // double rgbAmbient[3];
+    // vecScale(3, ambientLight, rgb, rgbAmbient);
+    // vecAdd(3, rgbAmbient, rgbFinal, rgbFinal);
+
+    // double reflectionRGB[3] = {0, 0, 0};
+
+    // // reflection calculations
+    // if(contact -> reflectivity > 0)  {
+    //         reflection(contact, s, d, normal, rgb, reflectionRGB, depth);
+    //         vecAdd(3, reflectionRGB, rgbFinal, rgbFinal);
+    //         fflush(stdout);
+    // }
+
 
     // point lighting calculations
     double lightingRGB[3] = {0,0,0};
-    if (lighting(contact, s, intersectLoc, rgb, lightingRGB) == minIndex)  {
-        printf("oops\n");
-    }
+    lighting(contact, s, intersectLoc, normal, rgb, lightingRGB);
+    vecAdd(3, lightingRGB, rgbFinal, rgbFinal);
 
-    // if(once && vecDot(3, lightingRGB, lightingRGB) != 0)  {
-    //     once = 0;
-    //     vecPrint(3, lightingRGB);
-    //     printf("uhhh\n");
-    // }
+    if(once && vecDot(3, lightingRGB, lightingRGB) != 0)  {
+        once = 0;
+        vecPrint(3, lightingRGB);
+        printf("uhhh\n");
+    }
 
     return minIndex;
 }
@@ -370,10 +375,16 @@ void initializeShapes() {
     sphereSetup(sphere2Radius, sphere2Center, indexSPHERE2, sphere2Color, .3);
 
     double sphere3Radius = 50;
-    double sphere3Center[3] = {130, 300, 40};
+    double sphere3Center[3] = {130, 300, 70};
     double sphere3Color[3] = {.2, .5, .6};
     sphereSetup(sphere3Radius, sphere3Center, indexSPHERE3, sphere3Color, .3);
 
+    double sphere4Radius = 3;
+    double sphere4Center[3] = {200, 200, 40};
+    double sphere4Color[3] = {.3, .3, .3};
+    // sphereSetup(sphere4Radius, sphere4Center, indexSPHERE4, sphere4Color, .3);
+
+    double pos[3] = {200, 200, 40};
     sceneInitialize(sphere2Center, sphere1Radius * 2, 500);
 }
 
@@ -415,8 +426,8 @@ void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
 // sets up our lights
 void initializeLights()  {
     lights[0] = malloc(sizeof(light));
-    double color[3] = {1000,1000,1000};
-    double pos[3] =   {256,256,256};
+    double color[3] = {1,1,1};
+    double pos[3] =   {200, 200, -500};
     lightInit(lights[0], color, pos);
 }
 
