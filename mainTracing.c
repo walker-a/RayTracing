@@ -49,7 +49,7 @@ double lrVecSpherical[3];
 double udVecSpherical[3];
 double backgroundColor[3] = {.1, .1, .1};
 int maxDepth = 8;
-double ambientLight = .0;
+double ambientLight = 1;
 
 double transPhiView;
 double transThetaView;
@@ -57,6 +57,8 @@ double transPhiLR;
 double transThetaLR;
 double transPhiUD;
 double transThetaUD;
+
+int once;
 
 
 // converts vector coords to spherical coords
@@ -83,11 +85,11 @@ void modVec(double phi, double theta, double vec[3]) {
 // adds new phi and theta values to viewDir, lrVec, and udVec
 void modDirVecs(double phi, double theta) {
     transPhiView += phi;
-    transPhiLR += phi;
-    transPhiUD += phi;
     transThetaView += theta;
-    transThetaLR += theta;
-    transThetaUD += theta;
+    transPhiUD = transPhiView - M_PI / 2;
+    transThetaUD = transThetaView;
+//    transPhiLR = transPhiView - M_PI / 2; //This one is the tricky one
+    transThetaLR = transThetaView + M_PI / 2;
     modVec(transPhiView, transThetaView, viewDir);
     modVec(transPhiLR, transThetaLR, lrVec);
     modVec(transPhiUD, transThetaUD, udVec);
@@ -192,7 +194,7 @@ int lighting(shape *contact, double s[3], double intersectLoc[3], double surface
         // if nothing's blocking our shadow ray
         int intersect = rayIntersect(nudgedIntersect, rayDir, _, _);
         if(intersect == -1)  {
-            printf("in\n");
+            //printf("in\n");
             numUsedLights++;
             double dirToLight[3];
             vecSubtract(3, intersectLoc, lights[i] -> loc, dirToLight);
@@ -296,6 +298,26 @@ void sceneInitialize(double targetPos[3], double targetToScreenDist, double scre
 //    printf("viewDirSpherical: %f, %f, %f\n", viewDirSpherical[0], viewDirSpherical[1], viewDirSpherical[2]);
 //    printf("lrVecSpherical: %f, %f, %f\n", lrVecSpherical[0], lrVecSpherical[1], lrVecSpherical[2]);
 //    printf("udVecSpherical: %f, %f, %f\n", udVecSpherical[0], udVecSpherical[1], udVecSpherical[2]);
+    printf("-----TEST-----\n\n");
+    double vec1[3];
+    double vec2[3];
+    double vec3[3];
+    double testVec1[3] = {1, 0, 0};
+    double testVec2[3] = {1, M_PI / 2, 0};
+    double testVec3[3] = {1, M_PI / 2, M_PI / 2};
+    sphericalToVec(testVec1, vec1);
+    sphericalToVec(testVec2, vec2);
+    sphericalToVec(testVec3, vec3);
+    printf("vec1: %f, %f, %f\n", vec1[0], vec1[1], vec1[2]);
+    printf("vec2: %f, %f, %f\n", vec2[0], vec2[1], vec2[2]);
+    printf("vec3: %f, %f, %f\n", vec3[0], vec3[1], vec3[2]);
+    printf("DOT PRODUCTS (should always be 0): %f, %f, %f\n", vecDot(3, vec1, vec2), vecDot(3, vec1, vec3),
+           vecDot(3, vec2, vec3));
+    
+    printf("-----TEST END-----\n\n");
+
+    
+    
     
     
     viewDirSpherical[0] = 1; viewDirSpherical[1] = M_PI; viewDirSpherical[2] = 0;
@@ -364,10 +386,10 @@ void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
         case 257:
         break;
         case 262:  // right
-        modDirVecs(adjustPhi * sin(transPhiView), adjustTheta);
+        modDirVecs(0, adjustTheta);
         break;
         case 263:  // left
-        modDirVecs(adjustPhi * sin(transPhiView), -adjustTheta);
+        modDirVecs(0, -adjustTheta);
         break;
         case 264:  // down
         if(shiftIsDown)  {
