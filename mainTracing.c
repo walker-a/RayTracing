@@ -28,7 +28,7 @@ int numShapes = 3;
 shape *shapes[4];
 
 int numLights = 1;
-light *lights[1];
+light *lights[2];
 
 #define indexSPHERE1 0
 #define indexSPHERE2 1
@@ -173,8 +173,8 @@ void reflection(shape *contact, double s[3], double d[3], double normal[3], doub
     if (shootRay(nudgedS, r, reflectedRGB, depth + 1) > 0) {
         vecScale(3, contact -> reflectivity, reflectedRGB, reflectedRGB);
         double scaledRGB[3];
-        vecScale(3, 1 - contact -> reflectivity, rgb, scaledRGB);
-        vecAdd(3, reflectedRGB, scaledRGB, out);
+        // vecScale(3, 1 - contact -> reflectivity, rgb, scaledRGB);
+        vecAdd(3, reflectedRGB, out, out);
     }
 }
 
@@ -211,11 +211,12 @@ int lighting(shape *contact, double s[3], double intersectLoc[3], double normal[
 // writes answer to rgb
 // returns 0 on intersection, 1 on no intersection
 int shootRay(double s[3], double d[3], double rgbFinal[3], int depth)  {
-    if(depth >= maxDepth)
-        return 4;
 
     double black[3] = {0, 0, 0};
     vecCopy(3, black, rgbFinal);
+
+    if(depth >= maxDepth)
+        return 4;
 
     double intersectLoc[3];
     double normal[3];
@@ -381,8 +382,13 @@ void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
 void initializeLights()  {
     lights[0] = malloc(sizeof(light));
     double color[3] = {1,1,1};
-    double pos[3] =   {180, 170, -500};
+    double pos[3] =   {270, 256, -10};
     lightInit(lights[0], color, pos);
+
+    // lights[1] = malloc(sizeof(light));
+    double color2[3] = {0,0,0};
+    double pos2[3] =   {256, 256, 0};
+    // lightInit(lights[0], color2, pos2);
 }
 
 int main(int argc, const char **argv)  {
