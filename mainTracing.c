@@ -21,8 +21,8 @@
 #define PERSPECTIVE 1
 
 int projectionType;
-int screenHeight = 512;
-int screenWidth = 512;
+double screenHeight = 250;
+double screenWidth = 250;
 
 int numShapes = 3;
 shape *shapes[4];
@@ -49,7 +49,7 @@ double udVec[3];
 double lrVecSpherical[3];
 double udVecSpherical[3];
 double backgroundColor[3] = {.1, .1, .1};
-int maxDepth = 800;
+int maxDepth = 5;
 double ambientLight = 0;
 
 int once;
@@ -92,14 +92,14 @@ void rotateView(double theta, double axis[3]) {
 
 int getScreenCoordX(double coord) {
     double ratio = WIDTH / screenWidth;
-    coord = coord + screenWidth / 2;
-    return coord * ratio;
+    coord = round(coord * ratio);
+    return coord + WIDTH / 2;
 }
 
 int getScreenCoordY(double coord) {
     double ratio = HEIGHT / screenHeight;
-    coord = coord + screenHeight / 2;
-    return coord * ratio;
+    coord = round(coord * ratio);
+    return coord + HEIGHT / 2;
 }
 
 // given a starting point, a direction, and a length to go in that direction, find finish point, store in finishPoint
@@ -260,12 +260,25 @@ int shootRay(double s[3], double d[3], double rgbFinal[3], int depth)  {
     return minIndex;
 }
 
+void camInitialize(double targetPos[3], double targetToScreenDist, double screenToCamDist) {
+    // set targetPos and distances to screen and camera
+    vecCopy(3, targetPos, target);
+    targetToScreen = targetToScreenDist;
+    screenToCam = screenToCamDist;
+    //calculating screen center point
+    getNewPoint(targetPos, viewDir, targetToScreenDist, screenCenter);
+    //calculating cam pos
+    getNewPoint(screenCenter, viewDir, screenToCamDist, camPos);
+}
+
 // launches all the rays, one for each pixel
 void launchRays()  {
+    camInitialize(target, targetToScreen, screenToCam);
     double pixPos[3];
     double pixPosFinal[3];
-    for (int i = -screenWidth / 2; i < screenWidth / 2; i++) {
-        for (int j = -screenHeight / 2; j < screenHeight / 2; j++) {
+    double print = screenWidth / WIDTH;
+    for (double i = -screenWidth / 2; i < screenWidth / 2; i = i + screenWidth / WIDTH) {
+        for (double j = -screenHeight / 2; j < screenHeight / 2; j = j + screenHeight / HEIGHT) {
             getNewPoint(screenCenter, lrVec, i, pixPos);
             getNewPoint(pixPos, udVec, j, pixPosFinal);
             
@@ -287,20 +300,13 @@ void launchRays()  {
 void sceneInitialize(double targetPos[3], double targetToScreenDist, double screenToCamDist) {
     // defining vector directions for screen plane
     viewDir[0] = 0; viewDir[1] = 0; viewDir[2] = -1;
-    lrVec[0] = 0; lrVec[1] = 1; lrVec[2] = 0;
-    udVec[0] = 1; udVec[1] = 0; udVec[2] = 0;
+    lrVec[0] = 1; lrVec[1] = 0; lrVec[2] = 0;
+    udVec[0] = 0; udVec[1] = 1; udVec[2] = 0;
     vecUnit(3, viewDir, viewDir);
     vecUnit(3, lrVec, lrVec);
     vecUnit(3, udVec, udVec);
-
-    // set targetPos and distances to screen and camera
-    vecCopy(3, targetPos, target);
-    targetToScreen = targetToScreenDist;
-    screenToCam = screenToCamDist;
-    //calculating screen center point
-    getNewPoint(targetPos, viewDir, targetToScreenDist, screenCenter);
-    //calculating cam pos
-    getNewPoint(screenCenter, viewDir, screenToCamDist, camPos);
+    
+    camInitialize(targetPos, targetToScreenDist, screenToCamDist);
 }
 
 // sets up a sphere, given a radius, center, and shapeIndex in our shape array
@@ -331,8 +337,7 @@ void initializeShapes() {
     double sphere4Color[3] = {.3, .3, .3};
     // sphereSetup(sphere4Radius, sphere4Center, indexSPHERE4, sphere4Color, .3);
 
-    double pos[3] = {200, 200, 40};
-    sceneInitialize(sphere2Center, sphere1Radius * 2, 500);
+    sceneInitialize(sphere2Center, sphere1Radius * 10, 500);
 }
 
 // Move camera on arrow keys + shift + option.
@@ -350,14 +355,17 @@ void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
         break;
         case 264:  // down
         if(shiftIsDown)  {
-            targetToScreen--;
+            screenWidth *= .9;
+            screenHeight *= .9;
         }  else  {
             rotateView(-adjustTheta, lrVec);
         }
         break;
         case 265:  // up
         if(shiftIsDown)  {
-            targetToScreen++;
+            screenWidth *= 1.1;
+            screenHeight *= 1.1;
+//            targetToScreen = targetToScreen + 50;
         }  else  {
             rotateView(adjustTheta, lrVec);
         }
@@ -373,7 +381,7 @@ void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
 void initializeLights()  {
     lights[0] = malloc(sizeof(light));
     double color[3] = {1,1,1};
-    double pos[3] =   {0, 512, -100};
+    double pos[3] =   {180, 170, -500};
     lightInit(lights[0], color, pos);
 }
 
