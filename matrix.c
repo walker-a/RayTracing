@@ -121,10 +121,9 @@ void mat33AngleAxisRotation(double theta, double axis[3], double rot[3][3]) {
     double x = axis[0];
     double y = axis[1];
     double z = axis[2];
-    
     double rotMat[3][3] = {{cost + x * x * (1 - cost), x * y * (1 - cost) - z * sint, x * z * (1 - cost) + y * sint},
-                           {y * x * (1 - cost) + z * sint, cost + y * y * (1 - cost), y * z * (1 - cost) + x * sint},
-                           {z * x * (1 - cost) + y * sint, z * y * (1 - cost) - x * sint, cost + z * z * (1 - cost)}};
+                           {y * x * (1 - cost) + z * sint, cost + y * y * (1 - cost), y * z * (1 - cost) - x * sint},
+                           {z * x * (1 - cost) - y * sint, z * y * (1 - cost) + x * sint, cost + z * z * (1 - cost)}};
     
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {

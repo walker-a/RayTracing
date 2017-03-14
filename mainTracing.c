@@ -40,14 +40,11 @@ double target[3];
 double targetToScreen;
 double screenToCam;
 double viewDir[3];
-double viewDirSpherical[3];
 double screenCenter[3];
 double camPos[3];
 // lrVec and udVec must be perpendicular to viewDir
 double lrVec[3];
 double udVec[3];
-double lrVecSpherical[3];
-double udVecSpherical[3];
 double backgroundColor[3] = {.1, .14, .137};
 int maxDepth = 5;
 double ambientLight = 0;
@@ -71,18 +68,14 @@ void sphericalToVec(double spherical[3], double vec[3]) {
     vec[2] = spherical[0] * cos(spherical[1]);
 }
 
+// Uses angle axis rotation to rotate the direction the camera is looking at, as well as the vectors
+// describing the screen directions
 void rotateView(double theta, double axis[3]) {
     double rot[3][3];
-    double tempView[3];
-    double tempLR[3];
-    double tempUD[3];
-    vecCopy(3, viewDir, tempView);
-    vecCopy(3, lrVec, tempLR);
-    vecCopy(3, udVec, tempUD);
     mat33AngleAxisRotation(theta, axis, rot);
-    mat331Multiply(rot, tempView, viewDir);
-    mat331Multiply(rot, tempLR, lrVec);
-    mat331Multiply(rot, tempUD, udVec);
+    mat331Multiply(rot, viewDir, viewDir);
+    mat331Multiply(rot, lrVec, lrVec);
+    mat331Multiply(rot, udVec, udVec);
     vecUnit(3, viewDir, viewDir);
     vecUnit(3, lrVec, lrVec);
     vecUnit(3, udVec, udVec);
@@ -90,12 +83,14 @@ void rotateView(double theta, double axis[3]) {
 
 }
 
+// converts world x coordinates into screen coordinates from 0 to WIDTH - 1
 int getScreenCoordX(double coord) {
     double ratio = WIDTH / screenWidth;
     coord = round(coord * ratio);
     return coord + WIDTH / 2;
 }
 
+// converts world y coordinates into screen coordinates from 0 to HEIGHT - 1
 int getScreenCoordY(double coord) {
     double ratio = HEIGHT / screenHeight;
     coord = round(coord * ratio);
@@ -262,6 +257,7 @@ int shootRay(double s[3], double d[3], double rgbFinal[3], int depth)  {
     return minIndex;
 }
 
+// sets up the camera in relation to its target and the plane representing the screen
 void camInitialize(double targetPos[3], double targetToScreenDist, double screenToCamDist) {
     // set targetPos and distances to screen and camera
     vecCopy(3, targetPos, target);
@@ -278,19 +274,25 @@ void launchRays()  {
     camInitialize(target, targetToScreen, screenToCam);
     double pixPos[3];
     double pixPosFinal[3];
-    double print = screenWidth / WIDTH;
     for (double i = -screenWidth / 2; i < screenWidth / 2; i = i + screenWidth / WIDTH) {
         for (double j = -screenHeight / 2; j < screenHeight / 2; j = j + screenHeight / HEIGHT) {
             getNewPoint(screenCenter, lrVec, i, pixPos);
             getNewPoint(pixPos, udVec, j, pixPosFinal);
             
+            //calculates the ray direction
             double rayDir[3];
-            vecSubtract(3, pixPosFinal, camPos, rayDir);
-            vecUnit(3, rayDir, rayDir);
+            if (projectionType == ORTHOGRAPHIC) {
+                double rayDirTemp[3] = {-viewDir[0], -viewDir[1], -viewDir[2]};
+                vecCopy(3, rayDirTemp, rayDir);
+                vecUnit(3, rayDir, rayDir);
+            } else {
+                vecSubtract(3, pixPosFinal, camPos, rayDir);
+                vecUnit(3, rayDir, rayDir);
+            }
 
             double rgb[3];
             vecCopy(3, backgroundColor, rgb);
-
+            
             shootRay(pixPosFinal, rayDir, rgb, 0);
             pixSetRGB(getScreenCoordX(i), getScreenCoordY(j), rgb[0], rgb[1], rgb[2]);
         }
@@ -342,25 +344,30 @@ void initializeShapes() {
     sceneInitialize(sphere2Center, sphere1Radius * 10, 500);
 }
 
-// Move camera on arrow keys + shift + option.
+// Move camera on arrow keys, zoom through shift + up down, enter to change projection type.
 void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
         int altOptionIsDown, int superCommandIsDown) {
     double adjustTheta = 3.14 / 16;
     switch(key) {
         case 257:
+        if (projectionType == ORTHOGRAPHIC) {
+            projectionType = PERSPECTIVE;
+        } else {
+            projectionType = ORTHOGRAPHIC;
+        }
         break;
         case 262:  // right
-        rotateView(adjustTheta, udVec);
+        rotateView(-adjustTheta, udVec);
         break;
         case 263:  // left
-        rotateView(-adjustTheta, udVec);
+        rotateView(adjustTheta, udVec);
         break;
         case 264:  // down
         if(shiftIsDown)  {
             screenWidth *= .9;
             screenHeight *= .9;
         }  else  {
-            rotateView(-adjustTheta, lrVec);
+            rotateView(adjustTheta, lrVec);
         }
         break;
         case 265:  // up
@@ -369,7 +376,7 @@ void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
             screenHeight *= 1.1;
 //            targetToScreen = targetToScreen + 50;
         }  else  {
-            rotateView(adjustTheta, lrVec);
+            rotateView(-adjustTheta, lrVec);
         }
         break;
         default:
@@ -383,7 +390,7 @@ void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
 void initializeLights()  {
     lights[0] = malloc(sizeof(light));
     double color[3] = {1,1,1};
-    double pos[3] =   {220, 300, -100};
+    double pos[3] =   {180, 1000, 100};
     lightInit(lights[0], color, pos);
 
     // lights[1] = malloc(sizeof(light));
