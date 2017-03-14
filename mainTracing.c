@@ -24,7 +24,7 @@ int projectionType;
 double screenHeight = 250;
 double screenWidth = 250;
 
-int numShapes = 3;
+int numShapes = 4;
 shape *shapes[4];
 
 int numLights = 1;
@@ -47,7 +47,7 @@ double lrVec[3];
 double udVec[3];
 double backgroundColor[3] = {.1, .14, .137};
 int maxDepth = 5;
-double ambientLight = 0;
+double ambientLight = .5;
 
 int once;
 
@@ -72,15 +72,20 @@ void sphericalToVec(double spherical[3], double vec[3]) {
 // describing the screen directions
 void rotateView(double theta, double axis[3]) {
     double rot[3][3];
+    double tempView[3];
+    double tempLR[3];
+    double tempUD[3];
+    vecCopy(3, viewDir, tempView);
+    vecCopy(3, lrVec, tempLR);
+    vecCopy(3, udVec, tempUD);
     mat33AngleAxisRotation(theta, axis, rot);
-    mat331Multiply(rot, viewDir, viewDir);
-    mat331Multiply(rot, lrVec, lrVec);
-    mat331Multiply(rot, udVec, udVec);
+    mat331Multiply(rot, tempView, viewDir);
+    mat331Multiply(rot, tempLR, lrVec);
+    mat331Multiply(rot, tempUD, udVec);
     vecUnit(3, viewDir, viewDir);
     vecUnit(3, lrVec, lrVec);
     vecUnit(3, udVec, udVec);
     printf("DOT PRODUCTS (should always be 0): %f, %f, %f\n", vecDot(3, viewDir, lrVec), vecDot(3, viewDir, udVec), vecDot(3, udVec, lrVec));
-
 }
 
 // converts world x coordinates into screen coordinates from 0 to WIDTH - 1
@@ -166,9 +171,11 @@ void reflection(shape *contact, double s[3], double d[3], double normal[3], doub
     double nudgedS[3];
     vecNudge(s, r, nudgedS);
     if (shootRay(nudgedS, r, reflectedRGB, depth + 1) > 0) {
+        if(reflectedRGB[0] > 0)  {
+            // printf("%s\n", );
+        }
         vecScale(3, contact -> reflectivity, reflectedRGB, reflectedRGB);
         double scaledRGB[3];
-        // vecScale(3, 1 - contact -> reflectivity, rgb, scaledRGB);
         vecAdd(3, reflectedRGB, out, out);
     }
 }
@@ -186,7 +193,7 @@ int lighting(shape *contact, double s[3], double intersectLoc[3], double normal[
 
         // if nothing's blocking our shadow ray
         intersect = rayIntersect(nudgedIntersect, rayDir, _, _);
-        if(intersect == -1)  {
+        if(intersect < 0)  {
             numUsedLights++;
             double dirToLight[3];
             vecSubtract(3, lights[i] -> loc, intersectLoc, dirToLight);
@@ -211,7 +218,7 @@ int shootRay(double s[3], double d[3], double rgbFinal[3], int depth)  {
     vecCopy(3, black, rgbFinal);
 
     if(depth >= maxDepth)
-        return 4;
+        return -2;
 
     double intersectLoc[3];
     double normal[3];
@@ -229,9 +236,9 @@ int shootRay(double s[3], double d[3], double rgbFinal[3], int depth)  {
     contact -> color(contact, intersectLoc, rgb);
 
     // ambient lighting calculations
-    // double rgbAmbient[3];
-    // vecScale(3, ambientLight, rgb, rgbAmbient);
-    // vecAdd(3, rgbAmbient, rgbFinal, rgbFinal);
+    double rgbAmbient[3];
+    vecScale(3, ambientLight, rgb, rgbAmbient);
+    vecAdd(3, rgbAmbient, rgbFinal, rgbFinal);
 
     double reflectionRGB[3] = {0, 0, 0};
 
@@ -239,20 +246,18 @@ int shootRay(double s[3], double d[3], double rgbFinal[3], int depth)  {
     if(contact -> reflectivity > 0)  {
             reflection(contact, s, d, normal, rgb, reflectionRGB, depth);
             vecAdd(3, reflectionRGB, rgbFinal, rgbFinal);
-            // fflush(stdout);
     }
 
 
-    // point lighting calculations
     double lightingRGB[3] = {0,0,0};
     lighting(contact, s, intersectLoc, normal, rgb, lightingRGB);
     vecAdd(3, lightingRGB, rgbFinal, rgbFinal);
 
-    if(once && vecDot(3, lightingRGB, lightingRGB) != 0)  {
-        once = 0;
-        vecPrint(3, lightingRGB);
-        printf("uhhh\n");
-    }
+    // if(once && vecDot(3, lightingRGB, lightingRGB) != 0)  {
+    //     once = 0;
+    //     vecPrint(3, lightingRGB);
+    //     printf("uhhh\n");
+    // }
 
     return minIndex;
 }
@@ -322,24 +327,24 @@ void sphereSetup(double radius, double center[], int shapeIndex, double color[3]
 // sets up our shapes, which are currently three circles
 void initializeShapes() {
     double sphere1Radius = 30;
-    double sphere1Center[3] = {256, 150, 120};
+    double sphere1Center[3] = {300, 150, 120};
     double sphere1Color[3] = {.2, .8, .1};
-    sphereSetup(sphere1Radius, sphere1Center, indexSPHERE1, sphere1Color, .3);
+    sphereSetup(sphere1Radius, sphere1Center, indexSPHERE1, sphere1Color, .1);
 
     double sphere2Radius = 50;
     double sphere2Center[3] = {180, 170, 80};
     double sphere2Color[3] = {.5, .8, .8};
-    sphereSetup(sphere2Radius, sphere2Center, indexSPHERE2, sphere2Color, .3);
+    sphereSetup(sphere2Radius, sphere2Center, indexSPHERE2, sphere2Color, .1);
 
     double sphere3Radius = 50;
-    double sphere3Center[3] = {130, 170, 200};
+    double sphere3Center[3] = {100, 170, 200};
     double sphere3Color[3] = {.2, .5, .6};
-    sphereSetup(sphere3Radius, sphere3Center, indexSPHERE3, sphere3Color, .3);
+    sphereSetup(sphere3Radius, sphere3Center, indexSPHERE3, sphere3Color, .1);
 
     double sphere4Radius = 3;
     double sphere4Center[3] = {200, 200, 40};
     double sphere4Color[3] = {.3, .3, .3};
-    // sphereSetup(sphere4Radius, sphere4Center, indexSPHERE4, sphere4Color, .3);
+    sphereSetup(sphere4Radius, sphere4Center, indexSPHERE4, sphere4Color, .3);
 
     sceneInitialize(sphere2Center, sphere1Radius * 10, 500);
 }
@@ -390,13 +395,13 @@ void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
 void initializeLights()  {
     lights[0] = malloc(sizeof(light));
     double color[3] = {1,1,1};
-    double pos[3] =   {180, 1000, 100};
+    double pos[3] =   {1000, 1000, 100};
     lightInit(lights[0], color, pos);
 
     // lights[1] = malloc(sizeof(light));
     double color2[3] = {0,0,0};
     double pos2[3] =   {256, 256, 0};
-    // lightInit(lights[0], color2, pos2);
+    // lightInit(lights[1], color2, pos2);
 }
 
 int main(int argc, const char **argv)  {
