@@ -48,7 +48,7 @@ double lrVec[3];
 double udVec[3];
 double lrVecSpherical[3];
 double udVecSpherical[3];
-double backgroundColor[3] = {.5, .5, .5};
+double backgroundColor[3] = {.1, .1, .1};
 int maxDepth = 5;
 double ambientLight = 0;
 
