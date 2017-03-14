@@ -212,8 +212,8 @@ int lighting(shape *contact, double s[3], double intersectLoc[3], double normal[
 // returns 0 on intersection, 1 on no intersection
 int shootRay(double s[3], double d[3], double rgbFinal[3], int depth)  {
 
-    double black[3] = {0, 0, 0};
-    vecCopy(3, black, rgbFinal);
+
+    vecCopy(3, backgroundColor, rgbFinal);
 
     if(depth >= maxDepth)
         return 4;
