@@ -48,7 +48,7 @@ double lrVec[3];
 double udVec[3];
 double lrVecSpherical[3];
 double udVecSpherical[3];
-double backgroundColor[3] = {.1, .1, .1};
+double backgroundColor[3] = {.5, .5, .5};
 int maxDepth = 5;
 double ambientLight = 0;
 
@@ -318,7 +318,7 @@ void sphereSetup(double radius, double center[], int shapeIndex, double color[3]
 // sets up our shapes, which are currently three circles
 void initializeShapes() {
     double sphere1Radius = 30;
-    double sphere1Center[3] = {256, 256, 50};
+    double sphere1Center[3] = {256, 150, 120};
     double sphere1Color[3] = {.2, .8, .1};
     sphereSetup(sphere1Radius, sphere1Center, indexSPHERE1, sphere1Color, .3);
 
@@ -328,7 +328,7 @@ void initializeShapes() {
     sphereSetup(sphere2Radius, sphere2Center, indexSPHERE2, sphere2Color, .3);
 
     double sphere3Radius = 50;
-    double sphere3Center[3] = {130, 300, 70};
+    double sphere3Center[3] = {130, 170, 200};
     double sphere3Color[3] = {.2, .5, .6};
     sphereSetup(sphere3Radius, sphere3Center, indexSPHERE3, sphere3Color, .3);
 
@@ -381,7 +381,7 @@ void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
 void initializeLights()  {
     lights[0] = malloc(sizeof(light));
     double color[3] = {1,1,1};
-    double pos[3] =   {180, 170, -500};
+    double pos[3] =   {220, 300, -100};
     lightInit(lights[0], color, pos);
 }
 
