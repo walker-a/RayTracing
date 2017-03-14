@@ -55,6 +55,45 @@ int sphereIntersect(shape *sphere, double s[3], double d[3], double intersectLoc
     return 0;
 }
 
+// d = ((p0 - l0) . n)/(l . n)
+//      where 
+//          p0 = point on plane
+//          n   = normal
+//          l0 = point on line
+//          l   = line vector
+int planeIntersect(shape *plane, double l0[3], double l[3], double intersectLoc[3], double normal[3])  {
+    double p0Minusl0[3];
+    double *p0 = plane -> unif;
+    double *n  = plane -> unif + 3;
+    vecSubtract(3, p0, l0, p0Minusl0);
+    double d = vecDot(3, p0Minusl0, n) / vecDot(3, l, n);
+    if(d < 0)
+        return 1;
+    vecCopy(3, n, normal);
+    double froml0ToPlane[3];
+    vecScale(3, d, l, froml0ToPlane);
+    vecAdd(3, l0, froml0ToPlane, intersectLoc);
+}
+
+
+void planeColor(shape *plane, double intersectLoc[3], double rgb[3])  {
+    vecCopy(3, plane -> unif + 6, rgb);
+}
+
+shape *planeMalloc()  {
+    shape *toReturnShape = malloc(sizeof(shape));
+    toReturnShape -> unif = malloc(sizeof(double) * 9);
+    return toReturnShape;
+}
+
+void planeInit(shape *plane, double point[3], double normal[3], double rgb[3])  {
+    vecCopy(3, point,  plane -> unif);
+    vecCopy(3, normal, plane -> unif + 3);
+    vecCopy(3, rgb,    plane -> unif + 6);
+    plane -> intersection = planeIntersect;
+    plane -> color = planeColor;
+}
+
 // mallocs the space for a sphere and its innards.
 shape *sphereMalloc()  {
      shape *toReturnShape = malloc(sizeof(shape));
