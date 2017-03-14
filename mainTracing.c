@@ -231,6 +231,7 @@ int shootRay(double s[3], double d[3], double rgbFinal[3], int depth)  {
             vecAdd(3, reflectionRGB, rgbFinal, rgbFinal);
     }
 
+
     double lightingRGB[3] = {0,0,0};
     lighting(contact, s, intersectLoc, normal, rgb, lightingRGB);
     vecAdd(3, lightingRGB, rgbFinal, rgbFinal);
@@ -317,17 +318,17 @@ void initializeShapes() {
     double sphere1Radius = 30;
     double sphere1Center[3] = {300, 150, 120};
     double sphere1Color[3] = {.2, .8, .1};
-    sphereSetup(sphere1Radius, sphere1Center, indexSPHERE1, sphere1Color, .1);
+    sphereSetup(sphere1Radius, sphere1Center, indexSPHERE1, sphere1Color, .9);
 
     double sphere2Radius = 50;
     double sphere2Center[3] = {180, 170, 80};
     double sphere2Color[3] = {.5, .8, .8};
-    sphereSetup(sphere2Radius, sphere2Center, indexSPHERE2, sphere2Color, .1);
+    sphereSetup(sphere2Radius, sphere2Center, indexSPHERE2, sphere2Color, .9);
 
     double sphere3Radius = 50;
     double sphere3Center[3] = {100, 170, 200};
     double sphere3Color[3] = {.2, .5, .6};
-    sphereSetup(sphere3Radius, sphere3Center, indexSPHERE3, sphere3Color, .1);
+    sphereSetup(sphere3Radius, sphere3Center, indexSPHERE3, sphere3Color, .9);
 
     double sphere4Radius = 3;
     double sphere4Center[3] = {200, 200, 40};
