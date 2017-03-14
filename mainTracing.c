@@ -24,8 +24,8 @@ int projectionType;
 double screenHeight = 250;
 double screenWidth = 250;
 
-int numShapes = 4;
-shape *shapes[4];
+int numShapes = 5;
+shape *shapes[5];
 
 int numLights = 1;
 light *lights[2];
@@ -34,6 +34,7 @@ light *lights[2];
 #define indexSPHERE2 1
 #define indexSPHERE3 2
 #define indexSPHERE4 3
+#define indexPLANE1 4
 
 // variables necessary for tracing with the camera
 double target[3];
@@ -50,23 +51,6 @@ int maxDepth = 5;
 double ambientLight = .5;
 
 int once;
-
-
-// converts vector coords to spherical coords
-// stores info in array: array[0] = rho, array[1] = phi, array[2] = theta
-void vecToSpherical(double vec[3], double spherical[3]) {
-    spherical[0] = vecLength(3, vec);
-    spherical[1] = atan2(sqrt(vec[0] * vec[0] + vec[1] * vec[1]), vec[2]);
-    spherical[2] = atan2(vec[1], vec[0]);
-}
-
-// converts spherical coords to vector coords
-// spherical is rho, phi, theta
-void sphericalToVec(double spherical[3], double vec[3]) {
-    vec[0] = spherical[0] * sin(spherical[1]) * cos(spherical[2]);
-    vec[1] = spherical[0] * sin(spherical[1]) * sin(spherical[2]);
-    vec[2] = spherical[0] * cos(spherical[1]);
-}
 
 // Uses angle axis rotation to rotate the direction the camera is looking at, as well as the vectors
 // describing the screen directions
@@ -85,7 +69,6 @@ void rotateView(double theta, double axis[3]) {
     vecUnit(3, viewDir, viewDir);
     vecUnit(3, lrVec, lrVec);
     vecUnit(3, udVec, udVec);
-    printf("DOT PRODUCTS (should always be 0): %f, %f, %f\n", vecDot(3, viewDir, lrVec), vecDot(3, viewDir, udVec), vecDot(3, udVec, lrVec));
 }
 
 // converts world x coordinates into screen coordinates from 0 to WIDTH - 1
@@ -248,7 +231,6 @@ int shootRay(double s[3], double d[3], double rgbFinal[3], int depth)  {
             vecAdd(3, reflectionRGB, rgbFinal, rgbFinal);
     }
 
-
     double lightingRGB[3] = {0,0,0};
     lighting(contact, s, intersectLoc, normal, rgb, lightingRGB);
     vecAdd(3, lightingRGB, rgbFinal, rgbFinal);
@@ -324,6 +306,12 @@ void sphereSetup(double radius, double center[], int shapeIndex, double color[3]
     sphereInit(shapes[shapeIndex], center, radius, reflectivity, color);
 }
 
+// sets up a plane, given a radius, center, and shapeIndex in our shape array
+void planeSetup(double normal[3], double center[3], int shapeIndex, double color[3], double reflectivity) {
+    shapes[shapeIndex] = planeMalloc();
+    planeInit(shapes[shapeIndex], center, normal, reflectivity, color);
+}
+
 // sets up our shapes, which are currently three circles
 void initializeShapes() {
     double sphere1Radius = 30;
@@ -345,6 +333,13 @@ void initializeShapes() {
     double sphere4Center[3] = {200, 200, 40};
     double sphere4Color[3] = {.3, .3, .3};
     sphereSetup(sphere4Radius, sphere4Center, indexSPHERE4, sphere4Color, .3);
+    
+    double plane1Normal[3];
+    double plane1Center[3] = {sphere2Center[0], sphere2Center[1] - sphere2Radius, sphere2Center[2]};
+    vecSubract(3, sphere2Center, plane1Center, plane1Normal);
+    vecUnit(3, plane1Normal, plane1Normal);
+    double plane1Color[3] = {.8, .8, .8};
+    planeSetup(plane1Normal, plane1Center, indexPLANE1, plane1Color, .7);
 
     sceneInitialize(sphere2Center, sphere1Radius * 10, 500);
 }
