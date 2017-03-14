@@ -1,7 +1,10 @@
 /* 
 * Made by Jack Wines and Alex Walker
 * 01/39/17
-* compile with the following
+* Compile with make fast, make accurate, or make debug
+* run with rayTracing
+*
+* Alternitively, compile with the following
 * clang mainTracing.c 000pixel.h 000pixel.o -lglfw -framework OpenGL
 */
 
@@ -27,7 +30,7 @@ double screenWidth = 250;
 int numShapes = 5;
 shape *shapes[5];
 
-int numLights = 1;
+int numLights = 2;
 light *lights[2];
 
 #define indexSPHERE1 0
@@ -47,7 +50,7 @@ double camPos[3];
 double lrVec[3];
 double udVec[3];
 double backgroundColor[3] = {.1, .14, .137};
-int maxDepth = 5;
+int maxDepth = 15;
 double ambientLight = .5;
 
 int once;
@@ -219,9 +222,9 @@ int shootRay(double s[3], double d[3], double rgbFinal[3], int depth)  {
     contact -> color(contact, intersectLoc, rgb);
 
     // ambient lighting calculations
-    double rgbAmbient[3];
-    vecScale(3, ambientLight, rgb, rgbAmbient);
-    vecAdd(3, rgbAmbient, rgbFinal, rgbFinal);
+    // double rgbAmbient[3];
+    // vecScale(3, ambientLight, rgb, rgbAmbient);
+    // vecAdd(3, rgbAmbient, rgbFinal, rgbFinal);
 
     double reflectionRGB[3] = {0, 0, 0};
 
@@ -234,6 +237,7 @@ int shootRay(double s[3], double d[3], double rgbFinal[3], int depth)  {
 
     double lightingRGB[3] = {0,0,0};
     lighting(contact, s, intersectLoc, normal, rgb, lightingRGB);
+    vecScale(3, 1 - contact -> reflectivity, lightingRGB, lightingRGB);
     vecAdd(3, lightingRGB, rgbFinal, rgbFinal);
 
     // if(once && vecDot(3, lightingRGB, lightingRGB) != 0)  {
@@ -316,31 +320,31 @@ void planeSetup(double normal[3], double center[3], int shapeIndex, double color
 // sets up our shapes, which are currently three circles
 void initializeShapes() {
     double sphere1Radius = 30;
-    double sphere1Center[3] = {300, 150, 120};
+    double sphere1Center[3] = {300, 150, 120 };
     double sphere1Color[3] = {.2, .8, .1};
-    sphereSetup(sphere1Radius, sphere1Center, indexSPHERE1, sphere1Color, .9);
+    sphereSetup(sphere1Radius, sphere1Center, indexSPHERE1, sphere1Color, .0);
 
     double sphere2Radius = 50;
     double sphere2Center[3] = {180, 170, 80};
     double sphere2Color[3] = {.5, .8, .8};
-    sphereSetup(sphere2Radius, sphere2Center, indexSPHERE2, sphere2Color, .9);
+    sphereSetup(sphere2Radius, sphere2Center, indexSPHERE2, sphere2Color, .0);
 
     double sphere3Radius = 50;
     double sphere3Center[3] = {100, 170, 200};
     double sphere3Color[3] = {.2, .5, .6};
-    sphereSetup(sphere3Radius, sphere3Center, indexSPHERE3, sphere3Color, .9);
+    sphereSetup(sphere3Radius, sphere3Center, indexSPHERE3, sphere3Color, .0);
 
     double sphere4Radius = 3;
     double sphere4Center[3] = {200, 200, 40};
     double sphere4Color[3] = {.3, .3, .3};
-    sphereSetup(sphere4Radius, sphere4Center, indexSPHERE4, sphere4Color, .3);
+    sphereSetup(sphere4Radius, sphere4Center, indexSPHERE4, sphere4Color, .0);
     
     double plane1Normal[3];
     double plane1Center[3] = {sphere2Center[0], sphere2Center[1] - sphere2Radius, sphere2Center[2]};
-    vecSubract(3, sphere2Center, plane1Center, plane1Normal);
+    vecSubtract(3, sphere2Center, plane1Center, plane1Normal);
     vecUnit(3, plane1Normal, plane1Normal);
     double plane1Color[3] = {.8, .8, .8};
-    planeSetup(plane1Normal, plane1Center, indexPLANE1, plane1Color, .7);
+    planeSetup(plane1Normal, plane1Center, indexPLANE1, plane1Color, 0);
 
     sceneInitialize(sphere2Center, sphere1Radius * 10, 500);
 }
@@ -390,14 +394,14 @@ void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
 // sets up our lights
 void initializeLights()  {
     lights[0] = malloc(sizeof(light));
-    double color[3] = {1,1,1};
-    double pos[3] =   {1000, 1000, 100};
+    double color[3] = {.5,.5,.5};
+    double pos[3] =   {270, 300, 40};
     lightInit(lights[0], color, pos);
 
-    // lights[1] = malloc(sizeof(light));
-    double color2[3] = {0,0,0};
-    double pos2[3] =   {256, 256, 0};
-    // lightInit(lights[1], color2, pos2);
+    lights[1] = malloc(sizeof(light));
+    double color2[3] = {.5,.5,.5};
+    double pos2[3] =   {-170, 300, 40};
+    lightInit(lights[1], color2, pos2);
 }
 
 int main(int argc, const char **argv)  {

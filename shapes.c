@@ -1,3 +1,12 @@
+/*
+* Made by Jack Wines and Alex Walker for their final project for graphics.
+* Compile with make
+* run with rayTracing
+*
+* Alternatively, complile with:
+* clang -O3 mainTracing.c 000pixel.h 000pixel.o -lglfw -framework OpenGL
+*/
+
 typedef struct shape  {
     double* unif;
     int unifDim;
@@ -73,6 +82,7 @@ int planeIntersect(shape *plane, double l0[3], double l[3], double intersectLoc[
     double froml0ToPlane[3];
     vecScale(3, d, l, froml0ToPlane);
     vecAdd(3, l0, froml0ToPlane, intersectLoc);
+    return 0;
 }
 
 
@@ -86,12 +96,13 @@ shape *planeMalloc()  {
     return toReturnShape;
 }
 
-void planeInit(shape *plane, double point[3], double normal[3], double rgb[3])  {
+void planeInit(shape *plane, double point[3], double normal[3], double reflectivity, double rgb[3])  {
     vecCopy(3, point,  plane -> unif);
     vecCopy(3, normal, plane -> unif + 3);
     vecCopy(3, rgb,    plane -> unif + 6);
     plane -> intersection = planeIntersect;
     plane -> color = planeColor;
+    plane -> reflectivity = reflectivity;
 }
 
 // mallocs the space for a sphere and its innards.
