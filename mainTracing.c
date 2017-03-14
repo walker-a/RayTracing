@@ -48,7 +48,7 @@ double lrVec[3];
 double udVec[3];
 double lrVecSpherical[3];
 double udVecSpherical[3];
-double backgroundColor[3] = {.5, .5, .5};
+double backgroundColor[3] = {.1, .14, .137};
 int maxDepth = 5;
 double ambientLight = 0;
 
@@ -212,8 +212,8 @@ int lighting(shape *contact, double s[3], double intersectLoc[3], double normal[
 // returns 0 on intersection, 1 on no intersection
 int shootRay(double s[3], double d[3], double rgbFinal[3], int depth)  {
 
-
-    vecCopy(3, backgroundColor, rgbFinal);
+    double black[3] = {0, 0, 0};
+    vecCopy(3, black, rgbFinal);
 
     if(depth >= maxDepth)
         return 4;
@@ -225,6 +225,7 @@ int shootRay(double s[3], double d[3], double rgbFinal[3], int depth)  {
 
     // exit if we didn't hit anything
     if(minIndex == -1)  {
+        vecCopy(3, backgroundColor, rgbFinal);
         return 0;
     }
 
