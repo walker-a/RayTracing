@@ -198,6 +198,7 @@ int lighting(shape *contact, double s[3], double intersectLoc[3], double normal[
             vecScale(3, diffInt, lightColor, lightColor);
             vecAdd(3, lightColor, rgb, rgb);
         }
+        
     }
     return intersect;
 }
