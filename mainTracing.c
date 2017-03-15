@@ -34,10 +34,10 @@ double screenWidth = 512;
 
 // int numShapes = 6;
 // shape *shapes[6];
-int numShapes = 10;
-shape *shapes[10];
+int numShapes = 11;
+shape *shapes[11];
 
-int numLights = 2;
+int numLights = 1;
 light *lights[2];
 
 #define indexSPHERE1 0
@@ -50,6 +50,7 @@ light *lights[2];
 #define indexPLANE4 7
 #define indexPLANE5 8
 #define indexPLANE6 9
+#define indexLIGHTSPHERE 10
 
 // variables necessary for tracing with the camera
 double target[3];
@@ -114,15 +115,24 @@ void getNewPoint(double startPoint[3], double dir[3], double dist, double finish
     vecAdd(3, startPoint, largerVec, finishPoint);
 }
 
+int contains(shape *itemToLookFor, shape **l, int lLen){
+    for (int i = 0; i < lLen; ++i)  {
+        if(itemToLookFor == l[i])  {
+            return 1;
+        }
+    }
+    return 0;
+}
 
-// returns the index in shapes of the first object the ray hits
-// returns -1 otherwise
-int rayIntersect(double s[3], double d[3], double intersection[3], double normal[3])  {
+int rayIntersectAvoid(double s[3], double d[3], double intersection[3], double normal[3], shape **avoid, int avoidNum)  {
     int minIndex = -1;
     int max = -1;
     double minIntersectDist = -1;
 
     for (int k = 0; k < numShapes; ++k)  {
+        if(contains(shapes[k], avoid, avoidNum))
+            continue;
+
         double candidateNormal[3];
         double candidateLoc[3];
         if(shapes[k] -> intersection(shapes[k], s, d, candidateLoc, candidateNormal) == 0)  {
@@ -139,6 +149,12 @@ int rayIntersect(double s[3], double d[3], double intersection[3], double normal
         }
     }
     return minIndex;
+}
+
+// returns the index in shapes of the first object the ray hits
+// returns -1 otherwise
+int rayIntersect(double s[3], double d[3], double intersection[3], double normal[3])  {
+    return rayIntersectAvoid(s, d, intersection, normal, NULL, 0);
 }
 
 // nudges orig in direction, writes to result
@@ -192,7 +208,7 @@ int lighting(shape *contact, double s[3], double intersectLoc[3], double normal[
         double shadowIntersect[3];
 
         // if nothing's blocking our shadow ray
-        intersect = rayIntersect(nudgedIntersect, rayDir, shadowIntersect, _);
+        intersect = rayIntersectAvoid(nudgedIntersect, rayDir, shadowIntersect, _, lights[i] -> avoid, lights[i] -> avoidNum);
         double rayFromIntersectToLight[3];
         vecSubtract(3, lights[i] -> loc, shadowIntersect, rayFromIntersectToLight);
         vecUnit(3, rayFromIntersectToLight, rayFromIntersectToLight);
@@ -353,15 +369,15 @@ void sceneInitialize(double targetPos[3], double targetToScreenDist, double scre
 }
 
 // sets up a sphere, given a radius, center, and shapeIndex in our shape array
-void sphereSetup(double radius, double center[], int shapeIndex, double color[3], double reflectivity)  {
+void sphereSetup(double radius, double center[], int shapeIndex, double color[3], double reflectivity, double ambient)  {
     shapes[shapeIndex] = sphereMalloc();
-    sphereInit(shapes[shapeIndex], center, radius, reflectivity, color);
+    sphereInit(shapes[shapeIndex], center, radius, reflectivity, color, ambient);
 }
 
 // sets up a plane, given a radius, center, and shapeIndex in our shape array
-void planeSetup(double normal[3], double center[3], int shapeIndex, double color[3], double reflectivity) {
+void planeSetup(double normal[3], double center[3], int shapeIndex, double color[3], double reflectivity, double ambient) {
     shapes[shapeIndex] = planeMalloc();
-    planeInit(shapes[shapeIndex], center, normal, reflectivity, color);
+    planeInit(shapes[shapeIndex], center, normal, reflectivity, color, ambient);
 }
 
 // sets up our shapes, which are currently three circles
@@ -369,52 +385,58 @@ void initializeShapes() {
     double sphere1Radius = 90;
     double sphere1Center[3] = {160, -256 + sphere1Radius, 0};
     double sphere1Color[3] = {.2, .8, .1};
-    sphereSetup(sphere1Radius, sphere1Center, indexSPHERE1, sphere1Color, 0.0);
+    sphereSetup(sphere1Radius, sphere1Center, indexSPHERE1, sphere1Color, .3, ambientLight);
 
     double sphere2Radius = 110;
     double sphere2Center[3] = {-100, -256 + sphere2Radius, -100};
     double sphere2Color[3] = {.5, .8, .8};
-    sphereSetup(sphere2Radius, sphere2Center, indexSPHERE2, sphere2Color, 0.0);
+    sphereSetup(sphere2Radius, sphere2Center, indexSPHERE2, sphere2Color, .3, ambientLight);
 
     double sphere3Radius = 70;
     double sphere3Center[3] = {0, -256 + sphere3Radius, 185};
     double sphere3Color[3] = {.2, .5, .6};
-    sphereSetup(sphere3Radius, sphere3Center, indexSPHERE3, sphere3Color, 0.0);
+    sphereSetup(sphere3Radius, sphere3Center, indexSPHERE3, sphere3Color, .3, ambientLight);
 
     double sphere4Radius = 30;
     double sphere4Center[3] = {0, 50, 0};
     double sphere4Color[3] = {.3, .3, .3};
-    sphereSetup(sphere4Radius, sphere4Center, indexSPHERE4, sphere4Color, 1.0);
+    sphereSetup(sphere4Radius, sphere4Center, indexSPHERE4, sphere4Color, 1, ambientLight);
     
     double plane1Normal[3] = {0, 1, 0};
     double plane1Center[3] = {0, -256, 0};
     double plane1Color[3] = {.5, .5, .5};
-    planeSetup(plane1Normal, plane1Center, indexPLANE1, plane1Color, .5);
+    planeSetup(plane1Normal, plane1Center, indexPLANE1, plane1Color, .5, ambientLight);
 
-   double plane2Normal[3] = {1, 0, 0};
-   double plane2Center[3] = {-500, 0, 0};
-   double plane2Color[3] = {.5, .5, .5};
-   planeSetup(plane2Normal, plane2Center, indexPLANE2, plane2Color, .5);
+    double plane2Normal[3] = {1, 0, 0};
+    double plane2Center[3] = {-500, 0, 0};
+    double plane2Color[3] = {.5, .5, .5};
+    planeSetup(plane2Normal, plane2Center, indexPLANE2, plane2Color, .5, ambientLight);
 
-   double plane3Normal[3] = {0, 0, 1};
-   double plane3Center[3] = {0, 0, -500};
-   double plane3Color[3] = {.5, .5, .5};
-   planeSetup(plane3Normal, plane3Center, indexPLANE3, plane3Color, .5);
-    
-   double plane4Normal[3] = {0, 0, -1};
-   double plane4Center[3] = {0, 0, 500};
-   double plane4Color[3] = {.5, .5, .5};
-   planeSetup(plane4Normal, plane4Center, indexPLANE4, plane4Color, .5);
-   
-   double plane5Normal[3] = {0, -1, 0};
-   double plane5Center[3] = {0, 500, 0};
-   double plane5Color[3] = {.5, .5, .5};
-   planeSetup(plane5Normal, plane5Center, indexPLANE5, plane5Color, .5);
-   
-   double plane6Normal[3] = {-1, 0, 0};
-   double plane6Center[3] = {500, 0, 0};
-   double plane6Color[3] = {.5, .5, .5};
-   planeSetup(plane6Normal, plane6Center, indexPLANE6, plane6Color, .5);
+    double plane3Normal[3] = {0, 0, 1};
+    double plane3Center[3] = {0, 0, -500};
+    double plane3Color[3] = {.5, .5, .5};
+    planeSetup(plane3Normal, plane3Center, indexPLANE3, plane3Color, .5, ambientLight);
+
+    double plane4Normal[3] = {0, 0, -1};
+    double plane4Center[3] = {0, 0, 500};
+    double plane4Color[3] = {.5, .5, .5};
+    planeSetup(plane4Normal, plane4Center, indexPLANE4, plane4Color, .5, ambientLight);
+
+    double plane5Normal[3] = {0, -1, 0};
+    double plane5Center[3] = {0, 500, 0};
+    double plane5Color[3] = {.5, .5, .5};
+    planeSetup(plane5Normal, plane5Center, indexPLANE5, plane5Color, .5, ambientLight);
+
+    double plane6Normal[3] = {-1, 0, 0};
+    double plane6Center[3] = {500, 0, 0};
+    double plane6Color[3] = {.5, .5, .5};
+    planeSetup(plane6Normal, plane6Center, indexPLANE6, plane6Color, .5, ambientLight);
+
+    double lightSphereRadius = 10;
+    double lightSphereCenter[3] = {0, -256 + 400, 0};
+    double lightSphereColor[3] = {1, 1, 1};
+    shapes[indexLIGHTSPHERE] = sphereMalloc();
+    sphereInit(shapes[indexLIGHTSPHERE], lightSphereCenter, lightSphereRadius, 0, lightSphereColor, 1);
 
     double camTarget[3] = {0, 0, 0};
     sceneInitialize(camTarget, 256, 1000);
@@ -424,8 +446,9 @@ void initializeShapes() {
 void initializeLights()  {
     lights[0] = malloc(sizeof(light));
     double color[3] = {.6,.6,.6};
-    double pos[3] =   {0, 256, 0};
+    double pos[3] =   {0, -256 + 400, 0};
     lightInit(lights[0], color, pos);
+    lightSetAvoid(lights[0], shapes + indexLIGHTSPHERE, 1);
 
     lights[1] = malloc(sizeof(light));
     double color2[3] = {.6,.6,.6};

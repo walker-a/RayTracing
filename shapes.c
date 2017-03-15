@@ -15,6 +15,7 @@ typedef struct shape  {
     void (*color)(struct shape*, double[3], double[3]);
     // fraction of light that should be reflected
     double reflectivity;
+    double ambientLight;
 } shape;
 
 // returns 0 on success (real results), 1 on faliure (comples results)
@@ -97,7 +98,8 @@ shape *planeMalloc()  {
     return toReturnShape;
 }
 
-void planeInit(shape *plane, double point[3], double normal[3], double reflectivity, double rgb[3])  {
+void planeInit(shape *plane, double point[3], double normal[3], double reflectivity, double rgb[3], double ambient)  {
+    plane -> ambientLight = ambient;
     vecCopy(3, point,  plane -> unif);
     vecCopy(3, normal, plane -> unif + 3);
     vecCopy(3, rgb,    plane -> unif + 6);
@@ -119,7 +121,8 @@ void sphereDestroy(shape *toDestroy)  {
 }
 
 // sets the shape's unifs. [x, y, z, r]
-void sphereInit(shape *toReturnShape, double center[3], double radius, double reflectivity, double colors[3])  {
+void sphereInit(shape *toReturnShape, double center[3], double radius, double reflectivity, double colors[3], double ambient)  {
+    toReturnShape -> ambientLight = ambient;
     toReturnShape -> unifDim = 4;
     toReturnShape -> intersection = sphereIntersect;
     toReturnShape -> color = sphereColor;
