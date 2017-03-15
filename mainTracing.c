@@ -258,9 +258,9 @@ int shootRay(double s[3], double d[3], double rgbFinal[3], int depth)  {
     vecCopy(3, surfaceCol, rgb);
 
     // ambient lighting calculations
-    double rgbAmbient[3];
-    vecScale(3, ambientLight, rgb, rgbAmbient);
-    vecAdd(3, rgbAmbient, rgbFinal, rgbFinal);
+    // double rgbAmbient[3];
+    // vecScale(3, ambientLight, rgb, rgbAmbient);
+    // vecAdd(3, rgbAmbient, rgbFinal, rgbFinal);
 
     double reflectionRGB[3] = {0, 0, 0};
 
