@@ -66,7 +66,7 @@ double backgroundColor[3] = {0, 0, 0};
 int maxDepth = 4;
 int maxDepthLow = 4;
 int maxDepthHigh = 10;
-double ambientLight = .1;
+double ambientLight = .2;
 
 int once;
 
@@ -186,7 +186,7 @@ void reflection(shape *contact, double s[3], double d[3], double normal[3], doub
     vecUnit(3, r, r);
     double nudgedS[3];
     vecNudge(s, r, nudgedS);
-    if (shootRay(nudgedS, r, reflectedRGB, depth + 1) > 0) {
+    if (shootRay(nudgedS, r, reflectedRGB, depth + 1) >= 0) {
         if(reflectedRGB[0] > 0)  {
             // printf("%s\n", );
         }
@@ -261,7 +261,7 @@ int shootRay(double s[3], double d[3], double rgbFinal[3], int depth)  {
 
     // ambient lighting calculations
     double rgbAmbient[3];
-    vecScale(3, shapes[i] -> ambientLight, rgb, rgbAmbient);
+    vecScale(3, contact -> ambientLight, rgb, rgbAmbient);
     vecAdd(3, rgbAmbient, rgbFinal, rgbFinal);
 
     double reflectionRGB[3] = {0, 0, 0};
@@ -270,19 +270,19 @@ int shootRay(double s[3], double d[3], double rgbFinal[3], int depth)  {
     if(contact -> reflectivity > 0)  {
         double white[3] = {1, 1, 1};
         double metallicityRGB[3];
-        double metallicity = 1;
+        double metallicity = .5;
         vecSubtract(3, white, rgb, metallicityRGB);
         vecScale(3, (1 - metallicity), metallicityRGB, metallicityRGB);
         vecAdd(3, rgb, metallicityRGB, metallicityRGB);
         reflection(contact, intersectLoc, d, normal, reflectionRGB, depth);
         vecZipWithMultiply(3, metallicityRGB, reflectionRGB, reflectionRGB);
-        vecScale(3, (1 - shapes[i] -> ambientLight / 2), reflectionRGB, reflectionRGB);
+        vecScale(3, (1 - contact -> ambientLight / 2), reflectionRGB, reflectionRGB);
         vecAdd(3, reflectionRGB, rgbFinal, rgbFinal);
     }
 
     double lightingRGB[3] = {0,0,0};
     lighting(contact, s, intersectLoc, normal, rgb, lightingRGB);
-    vecScale(3, (1 - shapes[i] -> ambientLight / 2), lightingRGB, lightingRGB);
+    vecScale(3, (1 - contact -> ambientLight / 2), lightingRGB, lightingRGB);
     vecAdd(3, lightingRGB, rgbFinal, rgbFinal);
 
     return minIndex;
@@ -388,32 +388,32 @@ void initializeShapes() {
     double sphere1Radius = 90;
     double sphere1Center[3] = {160, -256 + sphere1Radius, 0};
     double sphere1Color[3] = {.2, .8, .1};
-    sphereSetup(sphere1Radius, sphere1Center, indexSPHERE1, sphere1Color, .3, ambientLight);
+    sphereSetup(sphere1Radius, sphere1Center, indexSPHERE1, sphere1Color, .5, ambientLight);
 
     double sphere2Radius = 110;
     double sphere2Center[3] = {-100, -256 + sphere2Radius, -100};
     double sphere2Color[3] = {.5, .8, .8};
-    sphereSetup(sphere2Radius, sphere2Center, indexSPHERE2, sphere2Color, .3, ambientLight);
+    sphereSetup(sphere2Radius, sphere2Center, indexSPHERE2, sphere2Color, .5, ambientLight);
 
     double sphere3Radius = 70;
     double sphere3Center[3] = {0, -256 + sphere3Radius, 185};
-    double sphere3Color[3] = {.2, .5, .6};
-    sphereSetup(sphere3Radius, sphere3Center, indexSPHERE3, sphere3Color, .3, ambientLight);
+    double sphere3Color[3] = {.8, .4, .4};
+    sphereSetup(sphere3Radius, sphere3Center, indexSPHERE3, sphere3Color, .5, ambientLight);
 
     double sphere4Radius = 30;
     double sphere4Center[3] = {0, 50, 0};
-    double sphere4Color[3] = {.3, .3, .3};
+    double sphere4Color[3] = {.8, .8, .8};
     sphereSetup(sphere4Radius, sphere4Center, indexSPHERE4, sphere4Color, 1, ambientLight);
     
     double plane1Normal[3] = {0, 1, 0};
     double plane1Center[3] = {0, -256, 0};
     double plane1Color[3] = {.5, .5, .5};
-    planeSetup(plane1Normal, plane1Center, indexPLANE1, plane1Color, .5, ambientLight);
+    planeSetup(plane1Normal, plane1Center, indexPLANE1, plane1Color, .2, ambientLight);
 
     double plane2Normal[3] = {1, 0, 0};
     double plane2Center[3] = {-500, 0, 0};
     double plane2Color[3] = {.5, .5, .5};
-    planeSetup(plane2Normal, plane2Center, indexPLANE2, plane2Color, .5, ambientLight);
+    planeSetup(plane2Normal, plane2Center, indexPLANE2, plane2Color, .2, ambientLight);
 
     double plane3Normal[3] = {0, 0, 1};
     double plane3Center[3] = {0, 0, -500};
@@ -435,11 +435,11 @@ void initializeShapes() {
     double plane6Color[3] = {.5, .5, .5};
     planeSetup(plane6Normal, plane6Center, indexPLANE6, plane6Color, .5, ambientLight);
 
-    double lightSphereRadius = 10;
-    double lightSphereCenter[3] = {0, -256 + 400, 0};
+    double lightSphereRadius = 100;
+    double lightSphereCenter[3] = {0, -256 + 256+499, 0};
     double lightSphereColor[3] = {1, 1, 1};
     shapes[indexLIGHTSPHERE] = sphereMalloc();
-    sphereInit(shapes[indexLIGHTSPHERE], lightSphereCenter, lightSphereRadius, 0, lightSphereColor, 1);
+    sphereInit(shapes[indexLIGHTSPHERE], lightSphereCenter, lightSphereRadius, 0, lightSphereColor, 2);
 
     double camTarget[3] = {0, 0, 0};
     sceneInitialize(camTarget, 256, 1000);
@@ -448,8 +448,8 @@ void initializeShapes() {
 // sets up our lights
 void initializeLights()  {
     lights[0] = malloc(sizeof(light));
-    double color[3] = {.6,.6,.6};
-    double pos[3] =   {0, -256 + 400, 0};
+    double color[3] = {1,1,1};
+    double pos[3] =   {0, -256 + 256+499, 0};
     lightInit(lights[0], color, pos);
     lightSetAvoid(lights[0], shapes + indexLIGHTSPHERE, 1);
 
