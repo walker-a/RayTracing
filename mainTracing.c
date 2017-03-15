@@ -32,10 +32,10 @@ int numPasses;
 double screenHeight = 512;
 double screenWidth = 512;
 
-int numShapes = 6;
-shape *shapes[6];
-//int numShapes = 10;
-//shape *shapes[10];
+// int numShapes = 6;
+// shape *shapes[6];
+int numShapes = 10;
+shape *shapes[10];
 
 int numLights = 2;
 light *lights[2];
@@ -393,26 +393,26 @@ void initializeShapes() {
    double plane2Center[3] = {-500, 0, 0};
    double plane2Color[3] = {1, 1, 1};
    planeSetup(plane2Normal, plane2Center, indexPLANE2, plane2Color, .1);
-//
-//    double plane3Normal[3] = {0, 0, 1};
-//    double plane3Center[3] = {0, 0, -500};
-//    double plane3Color[3] = {.8, .8, .8};
-//    planeSetup(plane3Normal, plane3Center, indexPLANE3, plane3Color, .1);
+
+   double plane3Normal[3] = {0, 0, 1};
+   double plane3Center[3] = {0, 0, -500};
+   double plane3Color[3] = {.8, .8, .8};
+   planeSetup(plane3Normal, plane3Center, indexPLANE3, plane3Color, .1);
     
-//    double plane4Normal[3] = {0, 0, -1};
-//    double plane4Center[3] = {0, 0, 500};
-//    double plane4Color[3] = {.8, .8, .8};
-//    planeSetup(plane4Normal, plane4Center, indexPLANE4, plane4Color, .1);
-//    
-//    double plane5Normal[3] = {0, -1, 0};
-//    double plane5Center[3] = {0, 500, 0};
-//    double plane5Color[3] = {.8, .8, .8};
-//    planeSetup(plane5Normal, plane5Center, indexPLANE5, plane5Color, .1);
-//    
-//    double plane6Normal[3] = {-1, 0, 0};
-//    double plane6Center[3] = {500, 0, 0};
-//    double plane6Color[3] = {.8, .8, .8};
-//    planeSetup(plane6Normal, plane6Center, indexPLANE6, plane6Color, .1);
+   double plane4Normal[3] = {0, 0, -1};
+   double plane4Center[3] = {0, 0, 500};
+   double plane4Color[3] = {.8, .8, .8};
+   planeSetup(plane4Normal, plane4Center, indexPLANE4, plane4Color, .1);
+   
+   double plane5Normal[3] = {0, -1, 0};
+   double plane5Center[3] = {0, 500, 0};
+   double plane5Color[3] = {.8, .8, .8};
+   planeSetup(plane5Normal, plane5Center, indexPLANE5, plane5Color, .1);
+   
+   double plane6Normal[3] = {-1, 0, 0};
+   double plane6Center[3] = {500, 0, 0};
+   double plane6Color[3] = {.8, .8, .8};
+   planeSetup(plane6Normal, plane6Center, indexPLANE6, plane6Color, .1);
 
     double camTarget[3] = {0, 0, 0};
     sceneInitialize(camTarget, 256, 500);
