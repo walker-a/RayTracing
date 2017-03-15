@@ -7,15 +7,20 @@
 * clang -O3 mainTracing.c 000pixel.h 000pixel.o -lglfw -framework OpenGL
 */
 
+// shape struct
+// unif keeps track of coordinate points defining the object as well as color
+// each shape has its own intersection and find color functions
+// stores reflectiviity, a value for ambient light (used in lighting calculations) and refraction info
 typedef struct shape  {
     double* unif;
     int unifDim;
-    int isLight;
     int (*intersection)(struct shape*, double[3], double[3], double[3], double[3]);
     void (*color)(struct shape*, double[3], double[3]);
     // fraction of light that should be reflected
     double reflectivity;
     double ambientLight;
+    double refrIndex;
+    double transparency;
 } shape;
 
 // returns 0 on success (real results), 1 on faliure (comples results)
@@ -29,6 +34,7 @@ int quadraticFormula (double results[2], double a, double b, double c)  {
     return 0;
 }
 
+// stores the sphere's color into rgb
 void sphereColor(shape *inputSphere, double intersectLoc[3], double rgb[3])  {
     vecCopy(3, inputSphere -> unif + 4, rgb);
 }
@@ -66,6 +72,8 @@ int sphereIntersect(shape *sphere, double s[3], double d[3], double intersectLoc
     return 0;
 }
 
+
+// formula used to find intersection:
 // d = ((p0 - l0) . n)/(l . n)
 //      where 
 //          p0 = point on plane
@@ -87,18 +95,21 @@ int planeIntersect(shape *plane, double l0[3], double l[3], double intersectLoc[
     return 0;
 }
 
-
+// stores the planes color in rgb
 void planeColor(shape *plane, double intersectLoc[3], double rgb[3])  {
     vecCopy(3, plane -> unif + 6, rgb);
 }
 
+// mallocs the space for a plane and its innards.
 shape *planeMalloc()  {
     shape *toReturnShape = malloc(sizeof(shape));
     toReturnShape -> unif = malloc(sizeof(double) * 9);
     return toReturnShape;
 }
 
-void planeInit(shape *plane, double point[3], double normal[3], double reflectivity, double rgb[3], double ambient)  {
+// initializes a plane
+void planeInit(shape *plane, double point[3], double normal[3], double reflectivity, double rgb[3], double ambient,
+               double refractionIndex, double transparence)  {
     plane -> ambientLight = ambient;
     vecCopy(3, point,  plane -> unif);
     vecCopy(3, normal, plane -> unif + 3);
@@ -106,6 +117,8 @@ void planeInit(shape *plane, double point[3], double normal[3], double reflectiv
     plane -> intersection = planeIntersect;
     plane -> color = planeColor;
     plane -> reflectivity = reflectivity;
+    plane -> refrIndex = refractionIndex;
+    plane -> transparency = transparence;
 }
 
 // mallocs the space for a sphere and its innards.
@@ -115,13 +128,15 @@ shape *sphereMalloc()  {
      return toReturnShape;
 }
 
-void sphereDestroy(shape *toDestroy)  {
+// destroys all objects
+void objectDestroy(shape *toDestroy)  {
     free(toDestroy -> unif);
     free(toDestroy);
 }
 
 // sets the shape's unifs. [x, y, z, r]
-void sphereInit(shape *toReturnShape, double center[3], double radius, double reflectivity, double colors[3], double ambient)  {
+void sphereInit(shape *toReturnShape, double center[3], double radius, double reflectivity, double colors[3], double ambient,
+                double refractionIndex, double transparence)  {
     toReturnShape -> ambientLight = ambient;
     toReturnShape -> unifDim = 4;
     toReturnShape -> intersection = sphereIntersect;
@@ -130,4 +145,6 @@ void sphereInit(shape *toReturnShape, double center[3], double radius, double re
     toReturnShape -> unif[3] = radius;
     toReturnShape -> reflectivity = reflectivity;
     vecCopy(3, colors, toReturnShape -> unif + 4);
+    toReturnShape -> refrIndex = refractionIndex;
+    toReturnShape -> transparency = transparence;
 }

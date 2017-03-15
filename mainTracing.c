@@ -1,6 +1,6 @@
 /* 
 * Made by Jack Wines and Alex Walker
-* 01/39/17
+* 03/15/17
 * Compile with make fast, make accurate, or make debug
 * run with rayTracing
 *
@@ -32,8 +32,6 @@ int numPasses;
 double screenHeight = 512;
 double screenWidth = 512;
 
-// int numShapes = 6;
-// shape *shapes[6];
 int numShapes = 11;
 shape *shapes[11];
 
@@ -66,9 +64,7 @@ double backgroundColor[3] = {0, 0, 0};
 int maxDepth = 4;
 int maxDepthLow = 4;
 int maxDepthHigh = 10;
-double ambientLight = .2;
-
-int once;
+double ambientLight = 0.1;
 
 // Uses angle axis rotation to rotate the direction the camera is looking at, as well as the vectors
 // describing the screen directions
@@ -126,6 +122,9 @@ int contains(shape *itemToLookFor, shape **l, int lLen){
     return 0;
 }
 
+// returns the index in shapes of the first object the ray hits, avoiding avoidNum objects at index avoid in
+// the list of shapes. This lets point lights pass through their physical representations
+// returns -1 otherwise
 int rayIntersectAvoid(double s[3], double d[3], double intersection[3], double normal[3], shape **avoid, int avoidNum)  {
     int minIndex = -1;
     int max = -1;
@@ -159,7 +158,8 @@ int rayIntersect(double s[3], double d[3], double intersection[3], double normal
     return rayIntersectAvoid(s, d, intersection, normal, NULL, 0);
 }
 
-// nudges orig in direction, writes to result
+// nudges orig vector in direction, writes to result
+// prevents point from intersecting with itself
 void vecNudge(double orig[3], double direction[3], double result[3])  {
     double tinyDir[3];
     vecScale(3, .000001, direction, tinyDir);
@@ -173,11 +173,12 @@ void vecZipWithMultiply(int length, double *a, double *b, double *result)  {
     }
 }
 
-int shootRay(double s[3], double d[3], double rgbFinal[3], int depth);
+int shootRay(double s[3], double d[3], double rgbFinal[3], int depth, int shouldReflect);
 
-// handles the reflection
-// r = d − 2(d⋅n)n
+// finds the reflection direction and shoots a ray in that direction
+// equation used: r = d − 2(d⋅n)n
 void reflection(shape *contact, double s[3], double d[3], double normal[3], double out[3], int depth)  {
+    int shouldReflect = 1;
     double twodnn[3];
     double r[3];
     double reflectedRGB[3] = {0,0,0};
@@ -186,16 +187,12 @@ void reflection(shape *contact, double s[3], double d[3], double normal[3], doub
     vecUnit(3, r, r);
     double nudgedS[3];
     vecNudge(s, r, nudgedS);
-    if (shootRay(nudgedS, r, reflectedRGB, depth + 1) >= 0) {
-        if(reflectedRGB[0] > 0)  {
-            // printf("%s\n", );
-        }
-        vecScale(3, contact -> reflectivity, reflectedRGB, reflectedRGB);
-        double scaledRGB[3];
-        vecAdd(3, reflectedRGB, out, out);
+    if (shootRay(nudgedS, r, reflectedRGB, depth + 1, shouldReflect) >= 0) {
+        vecCopy(3, reflectedRGB, out);
     }
 }
 
+// does necessary calculations to find diffuse lighting at intersection point intersectLoc
 int lighting(shape *contact, double s[3], double intersectLoc[3], double normal[3], double surfaceCol[3], double rgb[3])  {
     int numUsedLights = 0;
     int intersect = -1;
@@ -222,19 +219,85 @@ int lighting(shape *contact, double s[3], double intersectLoc[3], double normal[
             vecUnit(3, dirToLight, dirToLight);
             double diffInt = vecDot(3, dirToLight, normal);
             diffInt = diffInt < 0? 0: diffInt;
-            double lightColor[3];
-            vecZipWithMultiply(3, lights[i] -> color, surfaceCol, lightColor);
-            vecScale(3, diffInt, lightColor, lightColor);
-            vecAdd(3, lightColor, rgb, rgb);
+            double diffColor[3];
+            vecZipWithMultiply(3, lights[i] -> color, surfaceCol, diffColor);
+            vecScale(3, diffInt, diffColor, diffColor);
+            vecCopy(3, diffColor, rgb);
         }
     }
     return intersect;
 }
 
-// launches a ray, does neccessary reflection.
+// calculates a refracted rgb value
+void refraction(shape *contact, double s[3], double d[3], double normal[3], double out[3], int depth) {
+    int shouldReflect = 1;
+    double refrDir[3];
+    double cosD = vecDot(3, d, normal);
+    if (cosD < -1) {cosD = -1;}
+    if (cosD > 1) {cosD = 1;}
+    double etaD = 1;
+    double etaN = contact -> refrIndex; 
+    double n[3];
+    vecCopy(3, normal, n);
+    // if we are inside the shape (we have made contact with the other side)
+    if (cosD < 0) {
+        cosD = -cosD;
+    } 
+    // if we are not inside the shape
+    else {
+        etaD = etaN;
+        etaN = 1;
+        vecScale(3, -1, n, n);
+        shouldReflect = 0;
+    } 
+    double eta = etaD / etaN; 
+    double k = 1 - eta * eta * (1 - cosD * cosD);
+    if (k < 0) {
+        vecCopy(3, d, refrDir);
+    } else {
+        vecScale(3, eta, s, s);
+        vecScale(3, (eta * cosD - sqrt(k)), n, n);
+        vecAdd(3, s, n, refrDir); 
+    }
+    vecUnit(3, refrDir, refrDir);
+    // shoot a ray in refracted direction
+    double nudgedS[3];
+    vecNudge(s, refrDir, nudgedS);
+    double refractedRGB[3] = {0, 0, 0};
+    if(shootRay(nudgedS, refrDir, refractedRGB, depth + 1, shouldReflect) >= 0) {
+        vecCopy(3, refractedRGB, out);
+    }  
+}
+
+// determines the proper scaling of the reflected rgb and the refracted rgb
+int fresnel(double refrIndex, double normal[3], double d[3]) {
+    int scalar;
+    double cosD = vecDot(3, normal, d);
+    if (cosD < -1) {cosD = -1;}
+    if (cosD > 1) {cosD = 1;}
+    float etaD = 1, etaN = refrIndex; 
+    if (cosD > 0) {
+        etaD = etaN;
+        etaN = 1;
+    }
+    float sinN = etaD / etaN * sqrt((1 - cosD * cosD) < 0 ? 0 : (1 - cosD * cosD)); 
+    if (sinN >= 1) { 
+        return 1; 
+    } 
+    else {
+        double cosN = sqrt((1 - sinN * sinN) < 0 ? 0 : (1 - sinN * sinN)); 
+        cosD = fabs(cosD); 
+        double Rs = ((etaN * cosD) - (etaD * cosN)) / ((etaN * cosD) + (etaD * cosN)); 
+        double Rp = ((etaD * cosD) - (etaN * cosN)) / ((etaD * cosD) + (etaN * cosN)); 
+        return (Rs * Rs + Rp * Rp) / 2; 
+    }
+}
+
+// launches a ray, does neccessary reflection and refraction (refraction not working yet).
 // writes answer to rgb
 // returns 0 on intersection, 1 on no intersection
-int shootRay(double s[3], double d[3], double rgbFinal[3], int depth)  {
+// s is the starting point of the ray, d is the direction
+int shootRay(double s[3], double d[3], double rgbFinal[3], int depth, int shouldReflect)  {
 
     double black[3] = {0, 0, 0};
     vecCopy(3, black, rgbFinal);
@@ -260,14 +323,11 @@ int shootRay(double s[3], double d[3], double rgbFinal[3], int depth)  {
     vecCopy(3, surfaceCol, rgb);
 
     // ambient lighting calculations
-    double rgbAmbient[3];
-    vecScale(3, contact -> ambientLight, rgb, rgbAmbient);
-    vecAdd(3, rgbAmbient, rgbFinal, rgbFinal);
-
-    double reflectionRGB[3] = {0, 0, 0};
+    double ambientRGB[3];
 
     // reflection calculations
-    if(contact -> reflectivity > 0)  {
+    double reflectionRGB[3] = {0, 0, 0};
+    if(contact -> reflectivity > 0 && shouldReflect == 1)  {
         double white[3] = {1, 1, 1};
         double metallicityRGB[3];
         double metallicity = .5;
@@ -276,14 +336,37 @@ int shootRay(double s[3], double d[3], double rgbFinal[3], int depth)  {
         vecAdd(3, rgb, metallicityRGB, metallicityRGB);
         reflection(contact, intersectLoc, d, normal, reflectionRGB, depth);
         vecZipWithMultiply(3, metallicityRGB, reflectionRGB, reflectionRGB);
-        vecScale(3, (1 - contact -> ambientLight / 2), reflectionRGB, reflectionRGB);
-        vecAdd(3, reflectionRGB, rgbFinal, rgbFinal);
     }
 
+    // diffuse calculations
     double lightingRGB[3] = {0,0,0};
     lighting(contact, s, intersectLoc, normal, rgb, lightingRGB);
-    vecScale(3, (1 - contact -> ambientLight / 2), lightingRGB, lightingRGB);
+    
+    // refraction calculations
+    double refractionRGB[3] = {0, 0, 0};
+    if(contact -> transparency > 0)  {
+        refraction(contact, intersectLoc, d, normal, refractionRGB, depth);
+    } 
+    
+    //scales the values of light and adds them to the final result
+    double scalarDiff = (1 - contact -> ambientLight) * (1 - contact -> reflectivity) * (1 - contact -> transparency);
+    double scalarRefl;
+    double scalarRefr;
+    if (contact -> transparency > 0) {
+        scalarRefl = fresnel(contact -> refrIndex, normal, d);
+        scalarRefr = (1 - scalarRefl);
+    } else {
+        scalarRefl = (1 - contact -> ambientLight) * contact -> reflectivity;
+        scalarRefr = 0;
+    }
+    vecScale(3, contact -> ambientLight, rgb, ambientRGB);
+    vecScale(3, scalarRefl, reflectionRGB, reflectionRGB);
+    vecScale(3, scalarDiff, lightingRGB, lightingRGB);
+    vecScale(3, scalarRefr, refractionRGB, refractionRGB);
+    vecAdd(3, ambientRGB, rgbFinal, rgbFinal);
     vecAdd(3, lightingRGB, rgbFinal, rgbFinal);
+    vecAdd(3, reflectionRGB, rgbFinal, rgbFinal);
+    vecAdd(3, refractionRGB, rgbFinal, rgbFinal);
 
     return minIndex;
 }
@@ -305,11 +388,13 @@ void launchRays()  {
     camInitialize(target, targetToScreen, screenToCam);
     double pixPos[3];
     double pixPosFinal[3];
+    int shouldReflect = 1; //we are not inside a transparent object, so the rays should reflect
     for (double i = -screenWidth / 2; i < screenWidth / 2; i = i + screenWidth / WIDTH) {
         for (double j = -screenHeight / 2; j < screenHeight / 2; j = j + screenHeight / HEIGHT) {
             double rgb[3];
             vecCopy(3, backgroundColor, rgb);
             
+            // antialiasing (subdivides each pixel into a numPasses by numPasses grid)
             if (aliasing == ANTIALIASING_ON) {
                 double tempRGB[3];
                 int counter = 0;
@@ -330,7 +415,7 @@ void launchRays()  {
                             vecSubtract(3, pixPosFinal, camPos, rayDir);
                             vecUnit(3, rayDir, rayDir);
                         }
-                        shootRay(pixPosFinal, rayDir, tempRGB, 0);
+                        shootRay(pixPosFinal, rayDir, tempRGB, 0, shouldReflect);
                         vecAdd(3, rgb, tempRGB, rgb);
                     }
                 }
@@ -350,7 +435,7 @@ void launchRays()  {
                     vecSubtract(3, pixPosFinal, camPos, rayDir);
                     vecUnit(3, rayDir, rayDir);
                 }
-                shootRay(pixPosFinal, rayDir, rgb, 0);
+                shootRay(pixPosFinal, rayDir, rgb, 0, shouldReflect);
                 pixSetRGB(getScreenCoordX(i), getScreenCoordY(j), rgb[0], rgb[1], rgb[2]);
             }
         }
@@ -372,74 +457,77 @@ void sceneInitialize(double targetPos[3], double targetToScreenDist, double scre
 }
 
 // sets up a sphere, given a radius, center, and shapeIndex in our shape array
-void sphereSetup(double radius, double center[], int shapeIndex, double color[3], double reflectivity, double ambient)  {
+void sphereSetup(double radius, double center[], int shapeIndex, double color[3], double reflectivity, double ambient,
+                 double refrIndex, double transparency)  {
     shapes[shapeIndex] = sphereMalloc();
-    sphereInit(shapes[shapeIndex], center, radius, reflectivity, color, ambient);
+    sphereInit(shapes[shapeIndex], center, radius, reflectivity, color, ambient, refrIndex, transparency);
 }
 
 // sets up a plane, given a radius, center, and shapeIndex in our shape array
-void planeSetup(double normal[3], double center[3], int shapeIndex, double color[3], double reflectivity, double ambient) {
+void planeSetup(double normal[3], double center[3], int shapeIndex, double color[3], double reflectivity, double ambient,
+                double refrIndex, double transparency) {
     shapes[shapeIndex] = planeMalloc();
-    planeInit(shapes[shapeIndex], center, normal, reflectivity, color, ambient);
+    planeInit(shapes[shapeIndex], center, normal, reflectivity, color, ambient, refrIndex, transparency);
 }
 
-// sets up our shapes, which are currently three circles
+// sets up all objects to be drawn
 void initializeShapes() {    
     double sphere1Radius = 90;
     double sphere1Center[3] = {160, -256 + sphere1Radius, 0};
     double sphere1Color[3] = {.2, .8, .1};
-    sphereSetup(sphere1Radius, sphere1Center, indexSPHERE1, sphere1Color, .5, ambientLight);
+    sphereSetup(sphere1Radius, sphere1Center, indexSPHERE1, sphere1Color, 0.5, ambientLight, 1.0, 0.0);
 
     double sphere2Radius = 110;
     double sphere2Center[3] = {-100, -256 + sphere2Radius, -100};
     double sphere2Color[3] = {.5, .8, .8};
-    sphereSetup(sphere2Radius, sphere2Center, indexSPHERE2, sphere2Color, .5, ambientLight);
+    sphereSetup(sphere2Radius, sphere2Center, indexSPHERE2, sphere2Color, 1.0, 0.0, 1.0, 0.0);
+    
 
     double sphere3Radius = 70;
     double sphere3Center[3] = {0, -256 + sphere3Radius, 185};
-    double sphere3Color[3] = {.8, .4, .4};
-    sphereSetup(sphere3Radius, sphere3Center, indexSPHERE3, sphere3Color, .5, ambientLight);
+    double sphere3Color[3] = {.9, 0.1, 0.1};
+    sphereSetup(sphere3Radius, sphere3Center, indexSPHERE3, sphere3Color, .5, ambientLight, 1, 0);
 
     double sphere4Radius = 30;
     double sphere4Center[3] = {0, 50, 0};
     double sphere4Color[3] = {.8, .8, .8};
-    sphereSetup(sphere4Radius, sphere4Center, indexSPHERE4, sphere4Color, 1, ambientLight);
+    sphereSetup(sphere4Radius, sphere4Center, indexSPHERE4, sphere4Color, 1, 0, 1, 0);
     
     double plane1Normal[3] = {0, 1, 0};
     double plane1Center[3] = {0, -256, 0};
     double plane1Color[3] = {.5, .5, .5};
-    planeSetup(plane1Normal, plane1Center, indexPLANE1, plane1Color, .2, ambientLight);
+    planeSetup(plane1Normal, plane1Center, indexPLANE1, plane1Color, .2, ambientLight, 1, 0);
 
     double plane2Normal[3] = {1, 0, 0};
     double plane2Center[3] = {-500, 0, 0};
     double plane2Color[3] = {.5, .5, .5};
-    planeSetup(plane2Normal, plane2Center, indexPLANE2, plane2Color, .2, ambientLight);
+    planeSetup(plane2Normal, plane2Center, indexPLANE2, plane2Color, .2, ambientLight, 1, 0);
 
     double plane3Normal[3] = {0, 0, 1};
     double plane3Center[3] = {0, 0, -500};
     double plane3Color[3] = {.5, .5, .5};
-    planeSetup(plane3Normal, plane3Center, indexPLANE3, plane3Color, .5, ambientLight);
+    planeSetup(plane3Normal, plane3Center, indexPLANE3, plane3Color, .5, ambientLight, 1, 0);
 
     double plane4Normal[3] = {0, 0, -1};
     double plane4Center[3] = {0, 0, 500};
     double plane4Color[3] = {.5, .5, .5};
-    planeSetup(plane4Normal, plane4Center, indexPLANE4, plane4Color, .5, ambientLight);
+    planeSetup(plane4Normal, plane4Center, indexPLANE4, plane4Color, .5, ambientLight, 1, 0);
 
     double plane5Normal[3] = {0, -1, 0};
     double plane5Center[3] = {0, 500, 0};
     double plane5Color[3] = {.5, .5, .5};
-    planeSetup(plane5Normal, plane5Center, indexPLANE5, plane5Color, .5, ambientLight);
+    planeSetup(plane5Normal, plane5Center, indexPLANE5, plane5Color, .5, ambientLight, 1, 0);
 
     double plane6Normal[3] = {-1, 0, 0};
     double plane6Center[3] = {500, 0, 0};
     double plane6Color[3] = {.5, .5, .5};
-    planeSetup(plane6Normal, plane6Center, indexPLANE6, plane6Color, .5, ambientLight);
+    planeSetup(plane6Normal, plane6Center, indexPLANE6, plane6Color, .5, ambientLight, 1, 0);
 
     double lightSphereRadius = 100;
     double lightSphereCenter[3] = {0, -256 + 256+499, 0};
     double lightSphereColor[3] = {1, 1, 1};
     shapes[indexLIGHTSPHERE] = sphereMalloc();
-    sphereInit(shapes[indexLIGHTSPHERE], lightSphereCenter, lightSphereRadius, 0, lightSphereColor, 2);
+    sphereInit(shapes[indexLIGHTSPHERE], lightSphereCenter, lightSphereRadius, 0, lightSphereColor, 2, 1, 0);
 
     double camTarget[3] = {0, 0, 0};
     sceneInitialize(camTarget, 256, 1000);
@@ -448,7 +536,7 @@ void initializeShapes() {
 // sets up our lights
 void initializeLights()  {
     lights[0] = malloc(sizeof(light));
-    double color[3] = {1,1,1};
+    double color[3] = {2,2,2};
     double pos[3] =   {0, -256 + 256+499, 0};
     lightInit(lights[0], color, pos);
     lightSetAvoid(lights[0], shapes + indexLIGHTSPHERE, 1);
@@ -460,6 +548,7 @@ void initializeLights()  {
 }
 
 // Move camera on arrow keys, zoom through shift + up down, enter to change projection type.
+// more controls outlined in the readme file
 void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
         int altOptionIsDown, int superCommandIsDown) {
     double adjustTheta = 3.14 / 16;
@@ -542,11 +631,6 @@ void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
 }
 
 int main(int argc, const char **argv)  {
-    once = 0;
-    // if(argc > 0)  {
-    //     ambientLight = atof(argv[0]);
-    //     maxDepth = atoi(argv[1]);
-    // }
     projectionType = PERSPECTIVE;
     aliasing = ANTIALIASING_OFF;
     maxDepth = maxDepthLow;
@@ -560,6 +644,6 @@ int main(int argc, const char **argv)  {
     pixSetKeyRepeatHandler(handleKeyDown);
     pixRun();
     for (int i = 0; i < numShapes; ++i)  {
-        sphereDestroy(shapes[i]);
+        objectDestroy(shapes[i]);
     }
 }
