@@ -23,12 +23,19 @@
 #define ORTHOGRAPHIC 0
 #define PERSPECTIVE 1
 
-int projectionType;
-double screenHeight = 250;
-double screenWidth = 250;
+#define ANTIALIASING_OFF 0
+#define ANTIALIASING_ON 1
 
-int numShapes = 6;
-shape *shapes[6];
+int projectionType;
+int aliasing;
+int numPasses;
+double screenHeight = 512;
+double screenWidth = 512;
+
+int numShapes = 5;
+shape *shapes[5];
+//int numShapes = 10;
+//shape *shapes[10];
 
 int numLights = 2;
 light *lights[2];
@@ -40,6 +47,9 @@ light *lights[2];
 #define indexPLANE1 4
 #define indexPLANE2 5
 #define indexPLANE3 6
+#define indexPLANE4 7
+#define indexPLANE5 8
+#define indexPLANE6 9
 
 // variables necessary for tracing with the camera
 double target[3];
@@ -52,7 +62,7 @@ double camPos[3];
 double lrVec[3];
 double udVec[3];
 double backgroundColor[3] = {0, 0, 0};
-int maxDepth = 15;
+int maxDepth = 10;
 double ambientLight = .5;
 
 int once;
@@ -236,12 +246,10 @@ int shootRay(double s[3], double d[3], double rgbFinal[3], int depth)  {
             vecAdd(3, reflectionRGB, rgbFinal, rgbFinal);
     }
 
-
     double lightingRGB[3] = {0,0,0};
     lighting(contact, s, intersectLoc, normal, rgb, lightingRGB);
     vecScale(3, 1 - contact -> reflectivity, lightingRGB, lightingRGB);
     vecAdd(3, lightingRGB, rgbFinal, rgbFinal);
-
     // if(once && vecDot(3, lightingRGB, lightingRGB) != 0)  {
     //     once = 0;
     //     vecPrint(3, lightingRGB);
@@ -270,25 +278,52 @@ void launchRays()  {
     double pixPosFinal[3];
     for (double i = -screenWidth / 2; i < screenWidth / 2; i = i + screenWidth / WIDTH) {
         for (double j = -screenHeight / 2; j < screenHeight / 2; j = j + screenHeight / HEIGHT) {
-            getNewPoint(screenCenter, lrVec, i, pixPos);
-            getNewPoint(pixPos, udVec, j, pixPosFinal);
-            
-            //calculates the ray direction
-            double rayDir[3];
-            if (projectionType == ORTHOGRAPHIC) {
-                double rayDirTemp[3] = {-viewDir[0], -viewDir[1], -viewDir[2]};
-                vecCopy(3, rayDirTemp, rayDir);
-                vecUnit(3, rayDir, rayDir);
-            } else {
-                vecSubtract(3, pixPosFinal, camPos, rayDir);
-                vecUnit(3, rayDir, rayDir);
-            }
-
             double rgb[3];
             vecCopy(3, backgroundColor, rgb);
             
-            shootRay(pixPosFinal, rayDir, rgb, 0);
-            pixSetRGB(getScreenCoordX(i), getScreenCoordY(j), rgb[0], rgb[1], rgb[2]);
+            if (aliasing == ANTIALIASING_ON) {
+                double tempRGB[3];
+                int counter = 0;
+                for (int k = 0; k < numPasses; k++) {
+                    for (int l = 0; l < numPasses; l++) {
+                        counter++;
+                        vecCopy(3, rgb, tempRGB);
+                        getNewPoint(screenCenter, lrVec, i + (screenWidth / WIDTH / numPasses) * (k + 1), pixPos);
+                        getNewPoint(pixPos, udVec, j + (screenHeight / WIDTH / numPasses) * (l + 1), pixPosFinal);
+            
+                        //calculates the ray direction
+                        double rayDir[3];
+                        if (projectionType == ORTHOGRAPHIC) {
+                            double rayDirTemp[3] = {-viewDir[0], -viewDir[1], -viewDir[2]};
+                            vecCopy(3, rayDirTemp, rayDir);
+                            vecUnit(3, rayDir, rayDir);
+                        } else {
+                            vecSubtract(3, pixPosFinal, camPos, rayDir);
+                            vecUnit(3, rayDir, rayDir);
+                        }
+                        shootRay(pixPosFinal, rayDir, tempRGB, 0);
+                        vecAdd(3, rgb, tempRGB, rgb);
+                    }
+                }
+                pixSetRGB(getScreenCoordX(i), getScreenCoordY(j), rgb[0]/counter, 
+                          rgb[1]/counter, rgb[2]/counter);
+            } else {
+                getNewPoint(screenCenter, lrVec, i, pixPos);
+                getNewPoint(pixPos, udVec, j, pixPosFinal);
+
+                //calculates the ray direction
+                double rayDir[3];
+                if (projectionType == ORTHOGRAPHIC) {
+                    double rayDirTemp[3] = {-viewDir[0], -viewDir[1], -viewDir[2]};
+                    vecCopy(3, rayDirTemp, rayDir);
+                    vecUnit(3, rayDir, rayDir);
+                } else {
+                    vecSubtract(3, pixPosFinal, camPos, rayDir);
+                    vecUnit(3, rayDir, rayDir);
+                }
+                shootRay(pixPosFinal, rayDir, rgb, 0);
+                pixSetRGB(getScreenCoordX(i), getScreenCoordY(j), rgb[0], rgb[1], rgb[2]);
+            }
         }
     }
 }
@@ -320,47 +355,59 @@ void planeSetup(double normal[3], double center[3], int shapeIndex, double color
 }
 
 // sets up our shapes, which are currently three circles
-void initializeShapes() {
-    double sphere1Radius = 30;
-    double sphere1Center[3] = {300, 150, 120};
+void initializeShapes() {    
+    double sphere1Radius = 90;
+    double sphere1Center[3] = {160, -256 + sphere1Radius, 0};
     double sphere1Color[3] = {.2, .8, .1};
     sphereSetup(sphere1Radius, sphere1Center, indexSPHERE1, sphere1Color, .3);
 
-    double sphere2Radius = 50;
-    double sphere2Center[3] = {180, 170, 80};
+    double sphere2Radius = 110;
+    double sphere2Center[3] = {-100, -256 + sphere2Radius, -100};
     double sphere2Color[3] = {.5, .8, .8};
     sphereSetup(sphere2Radius, sphere2Center, indexSPHERE2, sphere2Color, .3);
 
-    double sphere3Radius = 50;
-    double sphere3Center[3] = {100, 170, 200};
+    double sphere3Radius = 70;
+    double sphere3Center[3] = {0, -256 + sphere3Radius, 185};
     double sphere3Color[3] = {.2, .5, .6};
     sphereSetup(sphere3Radius, sphere3Center, indexSPHERE3, sphere3Color, .3);
 
-    double sphere4Radius = 3;
-    double sphere4Center[3] = {200, 200, 40};
+    double sphere4Radius = 30;
+    double sphere4Center[3] = {0, 50, 0};
     double sphere4Color[3] = {.3, .3, .3};
-    sphereSetup(sphere4Radius, sphere4Center, indexSPHERE4, sphere4Color, .3);
+    sphereSetup(sphere4Radius, sphere4Center, indexSPHERE4, sphere4Color, 1);
     
-    double plane1Normal[3];
-    double plane1Center[3] = {sphere2Center[0], sphere2Center[1] - sphere2Radius, sphere2Center[2]};
-    vecSubtract(3, sphere2Center, plane1Center, plane1Normal);
-    vecUnit(3, plane1Normal, plane1Normal);
+    double plane1Normal[3] = {0, 1, 0};
+    double plane1Center[3] = {0, -256, 0};
     double plane1Color[3] = {.8, .8, .8};
-    planeSetup(plane1Normal, plane1Center, indexPLANE1, plane1Color, .1);
+    planeSetup(plane1Normal, plane1Center, indexPLANE1, plane1Color, .3);
 
-    double plane2Normal[3] = {0, 0, -1};
-    double plane2Center[3] = {0, 0, 400};
-    vecUnit(3, plane2Normal, plane2Normal);
-    double plane2Color[3] = {.8, .8, .8};
-    planeSetup(plane2Normal, plane2Center, indexPLANE2, plane2Color, .1);
+//    double plane2Normal[3] = {1, 0, 0};
+//    double plane2Center[3] = {-500, 0, 0};
+//    double plane2Color[3] = {.8, .8, .8};
+//    planeSetup(plane2Normal, plane2Center, indexPLANE2, plane2Color, .1);
+//
+//    double plane3Normal[3] = {0, 0, 1};
+//    double plane3Center[3] = {0, 0, -500};
+//    double plane3Color[3] = {.8, .8, .8};
+//    planeSetup(plane3Normal, plane3Center, indexPLANE3, plane3Color, .1);
+    
+//    double plane4Normal[3] = {0, 0, -1};
+//    double plane4Center[3] = {0, 0, 500};
+//    double plane4Color[3] = {.8, .8, .8};
+//    planeSetup(plane4Normal, plane4Center, indexPLANE4, plane4Color, .1);
+//    
+//    double plane5Normal[3] = {0, -1, 0};
+//    double plane5Center[3] = {0, 500, 0};
+//    double plane5Color[3] = {.8, .8, .8};
+//    planeSetup(plane5Normal, plane5Center, indexPLANE5, plane5Color, .1);
+//    
+//    double plane6Normal[3] = {-1, 0, 0};
+//    double plane6Center[3] = {500, 0, 0};
+//    double plane6Color[3] = {.8, .8, .8};
+//    planeSetup(plane6Normal, plane6Center, indexPLANE6, plane6Color, .1);
 
-    double plane3Normal[3] = {0, 0, 1};
-    double plane3Center[3] = {0, 0, -300};
-    vecUnit(3, plane3Normal, plane3Normal);
-    double plane3Color[3] = {.8, .8, .8};
-    // planeSetup(plane3Normal, plane3Center, indexPLANE3, plane3Color, .1);
-
-    sceneInitialize(sphere2Center, sphere1Radius * 10, 500);
+    double camTarget[3] = {0, 0, 0};
+    sceneInitialize(camTarget, 256, 500);
 }
 
 // Move camera on arrow keys, zoom through shift + up down, enter to change projection type.
@@ -369,11 +416,17 @@ void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
     double adjustTheta = 3.14 / 16;
     double udVector[3] = {0,1,0};
     switch(key) {
-        case 257:
+        case 257: // ENTER
         if (projectionType == ORTHOGRAPHIC) {
             projectionType = PERSPECTIVE;
         } else {
             projectionType = ORTHOGRAPHIC;
+        }
+        case 65: // if 'a' is pressed
+        if (aliasing == ANTIALIASING_ON) {
+            aliasing = ANTIALIASING_OFF;
+        } else {
+            aliasing = ANTIALIASING_ON;
         }
         break;
         case 262:  // right
@@ -394,10 +447,36 @@ void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
         if(shiftIsDown)  {
             screenWidth *= 1.1;
             screenHeight *= 1.1;
-//            targetToScreen = targetToScreen + 50;
         }  else  {
             rotateView(adjustTheta, lrVec);
         }
+        break;
+        case 49:  // 1
+        numPasses = 1;
+        break;
+        case 50:  // 2
+        numPasses = 2;
+        break;
+        case 51:  // 3
+        numPasses = 3;
+        break;
+        case 52:  // 4
+        numPasses = 4;
+        break;
+        case 53:  // 5
+        numPasses = 5;
+        break;
+        case 54:  // 6
+        numPasses = 6;
+        break;
+        case 55:  // 7
+        numPasses = 7;
+        break;
+        case 56:  // 8
+        numPasses = 8;
+        break;
+        case 57:  // 9
+        numPasses = 9;
         break;
         default:
         return;
@@ -409,13 +488,13 @@ void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
 // sets up our lights
 void initializeLights()  {
     lights[0] = malloc(sizeof(light));
-    double color[3] = {.5,.5,.5};
-    double pos[3] =   {270, 300, 40};
+    double color[3] = {.7,.7,.7};
+    double pos[3] =   {0, 256, 0};
     lightInit(lights[0], color, pos);
 
     lights[1] = malloc(sizeof(light));
-    double color2[3] = {.5,.5,.5};
-    double pos2[3] =   {-170, 300, 40};
+    double color2[3] = {.7,.7,.7};
+    double pos2[3] =   {100, 256, 100};
     lightInit(lights[1], color2, pos2);
 }
 
@@ -426,6 +505,8 @@ int main(int argc, const char **argv)  {
     //     maxDepth = atoi(argv[1]);
     // }
     projectionType = PERSPECTIVE;
+    aliasing = ANTIALIASING_ON;
+    numPasses = 6;
     pixInitialize(WIDTH, HEIGHT, "ray tracing");
     pixClearRGB(0.0, 0.0, 0.0);
     initializeShapes();

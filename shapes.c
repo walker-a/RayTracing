@@ -10,6 +10,7 @@
 typedef struct shape  {
     double* unif;
     int unifDim;
+    int isLight;
     int (*intersection)(struct shape*, double[3], double[3], double[3], double[3]);
     void (*color)(struct shape*, double[3], double[3]);
     // fraction of light that should be reflected
