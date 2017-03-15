@@ -230,7 +230,7 @@ int shootRay(double s[3], double d[3], double rgbFinal[3], int depth)  {
 
     // reflection calculations
     if(contact -> reflectivity > 0)  {
-            reflection(contact, s, d, normal, rgb, reflectionRGB, depth);
+            reflection(contact, intersectLoc, d, normal, rgb, reflectionRGB, depth);
             vecAdd(3, reflectionRGB, rgbFinal, rgbFinal);
     }
 
@@ -322,22 +322,22 @@ void initializeShapes() {
     double sphere1Radius = 30;
     double sphere1Center[3] = {300, 150, 120 };
     double sphere1Color[3] = {.2, .8, .1};
-    sphereSetup(sphere1Radius, sphere1Center, indexSPHERE1, sphere1Color, .0);
+    sphereSetup(sphere1Radius, sphere1Center, indexSPHERE1, sphere1Color, .5);
 
     double sphere2Radius = 50;
     double sphere2Center[3] = {180, 170, 80};
     double sphere2Color[3] = {.5, .8, .8};
-    sphereSetup(sphere2Radius, sphere2Center, indexSPHERE2, sphere2Color, .0);
+    sphereSetup(sphere2Radius, sphere2Center, indexSPHERE2, sphere2Color, .5);
 
     double sphere3Radius = 50;
     double sphere3Center[3] = {100, 170, 200};
     double sphere3Color[3] = {.2, .5, .6};
-    sphereSetup(sphere3Radius, sphere3Center, indexSPHERE3, sphere3Color, .0);
+    sphereSetup(sphere3Radius, sphere3Center, indexSPHERE3, sphere3Color, .5);
 
     double sphere4Radius = 3;
     double sphere4Center[3] = {200, 200, 40};
     double sphere4Color[3] = {.3, .3, .3};
-    sphereSetup(sphere4Radius, sphere4Center, indexSPHERE4, sphere4Color, .0);
+    sphereSetup(sphere4Radius, sphere4Center, indexSPHERE4, sphere4Color, .5);
     
     double plane1Normal[3];
     double plane1Center[3] = {sphere2Center[0], sphere2Center[1] - sphere2Radius, sphere2Center[2]};
