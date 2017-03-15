@@ -32,12 +32,12 @@ int numPasses;
 double screenHeight = 512;
 double screenWidth = 512;
 
-int numShapes = 5;
-shape *shapes[5];
+int numShapes = 6;
+shape *shapes[6];
 //int numShapes = 10;
 //shape *shapes[10];
 
-int numLights = 2;
+int numLights = 1;
 light *lights[2];
 
 #define indexSPHERE1 0
@@ -182,18 +182,22 @@ int lighting(shape *contact, double s[3], double intersectLoc[3], double normal[
     int numUsedLights = 0;
     int intersect = -1;
     for (int i = 0; i < numLights; ++i)  {
+        double dirFromContactToLight[3];
         double rayDir[3];
         double nudgedIntersect[3];
-        vecSubtract(3, lights[i] -> loc, intersectLoc, rayDir);
-        vecUnit(3, rayDir, rayDir);
+        vecSubtract(3, lights[i] -> loc, intersectLoc, dirFromContactToLight);
+        vecUnit(3, dirFromContactToLight, rayDir);
         vecNudge(intersectLoc, rayDir, nudgedIntersect);
         double _[3];
+        double shadowIntersect[3];
 
         // if nothing's blocking our shadow ray
-        intersect = rayIntersect(nudgedIntersect, rayDir, _, _);
-        if(intersect < 0)  {
-            numUsedLights++;
+        intersect = rayIntersect(nudgedIntersect, rayDir, shadowIntersect, _);
+        double rayFromIntersectToLight[3];
+        vecSubtract(3, lights[i] -> loc, shadowIntersect, rayFromIntersectToLight);
+        if(intersect < 0 || vecLength(3, rayFromIntersectToLight) > vecLength(3, dirFromContactToLight))  {
             double dirToLight[3];
+            numUsedLights++;
             vecSubtract(3, lights[i] -> loc, intersectLoc, dirToLight);
             vecUnit(3, dirToLight, dirToLight);
             double diffInt = vecDot(3, dirToLight, normal);
@@ -255,7 +259,9 @@ int shootRay(double s[3], double d[3], double rgbFinal[3], int depth)  {
     //     vecPrint(3, lightingRGB);
     //     printf("uhhh\n");
     // }
-
+    if(vecLength(3, rgbFinal) == 0)  {
+        // printf("uhhh\n");
+    }
     return minIndex;
 }
 
@@ -378,13 +384,13 @@ void initializeShapes() {
     
     double plane1Normal[3] = {0, 1, 0};
     double plane1Center[3] = {0, -256, 0};
-    double plane1Color[3] = {.8, .8, .8};
-    planeSetup(plane1Normal, plane1Center, indexPLANE1, plane1Color, .3);
+    double plane1Color[3] = {1, 1, 1};
+    planeSetup(plane1Normal, plane1Center, indexPLANE1, plane1Color, 0);
 
-//    double plane2Normal[3] = {1, 0, 0};
-//    double plane2Center[3] = {-500, 0, 0};
-//    double plane2Color[3] = {.8, .8, .8};
-//    planeSetup(plane2Normal, plane2Center, indexPLANE2, plane2Color, .1);
+   double plane2Normal[3] = {1, 0, 0};
+   double plane2Center[3] = {-500, 0, 0};
+   double plane2Color[3] = {1, 1, 1};
+   planeSetup(plane2Normal, plane2Center, indexPLANE2, plane2Color, 0);
 //
 //    double plane3Normal[3] = {0, 0, 1};
 //    double plane3Center[3] = {0, 0, -500};
@@ -505,7 +511,7 @@ int main(int argc, const char **argv)  {
     //     maxDepth = atoi(argv[1]);
     // }
     projectionType = PERSPECTIVE;
-    aliasing = ANTIALIASING_ON;
+    aliasing = ANTIALIASING_OFF;
     numPasses = 6;
     pixInitialize(WIDTH, HEIGHT, "ray tracing");
     pixClearRGB(0.0, 0.0, 0.0);
