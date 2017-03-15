@@ -32,8 +32,6 @@ int numPasses;
 double screenHeight = 512;
 double screenWidth = 512;
 
-// int numShapes = 6;
-// shape *shapes[6];
 int numShapes = 10;
 shape *shapes[10];
 
@@ -63,7 +61,9 @@ double lrVec[3];
 double udVec[3];
 double backgroundColor[3] = {0, 0, 0};
 int maxDepth = 4;
-double ambientLight = .2;
+int maxDepthLow = 4;
+int maxDepthHigh = 10;
+double ambientLight = .1;
 
 int once;
 
@@ -243,29 +243,30 @@ int shootRay(double s[3], double d[3], double rgbFinal[3], int depth)  {
 
     // ambient lighting calculations
     double rgbAmbient[3];
-    vecScale(3, ambientLight, rgb, rgbAmbient);
+    vecScale(3, shapes[i] -> ambientLight, rgb, rgbAmbient);
     vecAdd(3, rgbAmbient, rgbFinal, rgbFinal);
 
     double reflectionRGB[3] = {0, 0, 0};
 
     // reflection calculations
     if(contact -> reflectivity > 0)  {
-            reflection(contact, intersectLoc, d, normal, reflectionRGB, depth);
-            vecZipWithMultiply(3, rgb, reflectionRGB, reflectionRGB);
-            vecAdd(3, reflectionRGB, rgbFinal, rgbFinal);
+        double white[3] = {1, 1, 1};
+        double metallicityRGB[3];
+        double metallicity = 1;
+        vecSubtract(3, white, rgb, metallicityRGB);
+        vecScale(3, (1 - metallicity), metallicityRGB, metallicityRGB);
+        vecAdd(3, rgb, metallicityRGB, metallicityRGB);
+        reflection(contact, intersectLoc, d, normal, reflectionRGB, depth);
+        vecZipWithMultiply(3, metallicityRGB, reflectionRGB, reflectionRGB);
+        vecScale(3, (1 - shapes[i] -> ambientLight / 2), reflectionRGB, reflectionRGB);
+        vecAdd(3, reflectionRGB, rgbFinal, rgbFinal);
     }
 
     double lightingRGB[3] = {0,0,0};
     lighting(contact, s, intersectLoc, normal, rgb, lightingRGB);
+    vecScale(3, (1 - shapes[i] -> ambientLight / 2), lightingRGB, lightingRGB);
     vecAdd(3, lightingRGB, rgbFinal, rgbFinal);
-    // if(once && vecDot(3, lightingRGB, lightingRGB) != 0)  {
-    //     once = 0;
-    //     vecPrint(3, lightingRGB);
-    //     printf("uhhh\n");
-    // }
-    if(vecLength(3, rgbFinal) == 0)  {
-        // printf("uhhh\n");
-    }
+
     return minIndex;
 }
 
@@ -369,21 +370,21 @@ void initializeShapes() {
     double sphere1Radius = 90;
     double sphere1Center[3] = {160, -256 + sphere1Radius, 0};
     double sphere1Color[3] = {.2, .8, .1};
-    sphereSetup(sphere1Radius, sphere1Center, indexSPHERE1, sphere1Color, 0.0);
+    sphereSetup(sphere1Radius, sphere1Center, indexSPHERE1, sphere1Color, 0.5);
 
     double sphere2Radius = 110;
     double sphere2Center[3] = {-100, -256 + sphere2Radius, -100};
     double sphere2Color[3] = {.5, .8, .8};
-    sphereSetup(sphere2Radius, sphere2Center, indexSPHERE2, sphere2Color, 0.0);
+    sphereSetup(sphere2Radius, sphere2Center, indexSPHERE2, sphere2Color, 0.5);
 
     double sphere3Radius = 70;
     double sphere3Center[3] = {0, -256 + sphere3Radius, 185};
     double sphere3Color[3] = {.2, .5, .6};
-    sphereSetup(sphere3Radius, sphere3Center, indexSPHERE3, sphere3Color, 0.0);
+    sphereSetup(sphere3Radius, sphere3Center, indexSPHERE3, sphere3Color, 0.5);
 
     double sphere4Radius = 30;
     double sphere4Center[3] = {0, 50, 0};
-    double sphere4Color[3] = {.3, .3, .3};
+    double sphere4Color[3] = {.8, .8, .8};
     sphereSetup(sphere4Radius, sphere4Center, indexSPHERE4, sphere4Color, 1.0);
     
     double plane1Normal[3] = {0, 1, 0};
@@ -501,6 +502,13 @@ void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
         case 57:  // 9
         numPasses = 9;
         break;
+        case 69:  // 9
+        if (maxDepth == maxDepthLow) {
+            maxDepth = maxDepthHigh;
+        } else {
+            maxDepth = maxDepthLow;
+        }
+        break;
         default:
         return;
     }
@@ -516,6 +524,7 @@ int main(int argc, const char **argv)  {
     // }
     projectionType = PERSPECTIVE;
     aliasing = ANTIALIASING_OFF;
+    maxDepth = maxDepthLow;
     numPasses = 6;
     pixInitialize(WIDTH, HEIGHT, "ray tracing");
     pixClearRGB(0.0, 0.0, 0.0);
