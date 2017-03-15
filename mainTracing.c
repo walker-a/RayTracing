@@ -159,7 +159,7 @@ int shootRay(double s[3], double d[3], double rgbFinal[3], int depth);
 
 // handles the reflection
 // r = d − 2(d⋅n)n
-void reflection(shape *contact, double s[3], double d[3], double normal[3], double rgb[3], double out[3], int depth)  {
+void reflection(shape *contact, double s[3], double d[3], double normal[3], double out[3], int depth)  {
     double twodnn[3];
     double r[3];
     double reflectedRGB[3] = {0,0,0};
@@ -238,6 +238,8 @@ int shootRay(double s[3], double d[3], double rgbFinal[3], int depth)  {
     shape *contact = shapes[minIndex];
     double rgb[3] = {0,0,0};
     contact -> color(contact, intersectLoc, rgb);
+    double surfaceCol[3];
+    vecCopy(3, surfaceCol, rgb);
 
     // ambient lighting calculations
     double rgbAmbient[3];
@@ -248,15 +250,13 @@ int shootRay(double s[3], double d[3], double rgbFinal[3], int depth)  {
 
     // reflection calculations
     if(contact -> reflectivity > 0)  {
-            reflection(contact, intersectLoc, d, normal, rgb, reflectionRGB, depth);
-            vecScale(3, 1 - ambientLight, reflectionRGB, reflectionRGB);
+            reflection(contact, intersectLoc, d, normal, reflectionRGB, depth);
+            vecZipWithMultiply(3, rgb, reflectionRGB, reflectionRGB);
             vecAdd(3, reflectionRGB, rgbFinal, rgbFinal);
     }
 
     double lightingRGB[3] = {0,0,0};
     lighting(contact, s, intersectLoc, normal, rgb, lightingRGB);
-    vecScale(3, 1 - contact -> reflectivity, lightingRGB, lightingRGB);
-    vecScale(3, 1 - ambientLight, lightingRGB, lightingRGB);
     vecAdd(3, lightingRGB, rgbFinal, rgbFinal);
     // if(once && vecDot(3, lightingRGB, lightingRGB) != 0)  {
     //     once = 0;
@@ -388,33 +388,33 @@ void initializeShapes() {
     
     double plane1Normal[3] = {0, 1, 0};
     double plane1Center[3] = {0, -256, 0};
-    double plane1Color[3] = {1, 1, 1};
-    planeSetup(plane1Normal, plane1Center, indexPLANE1, plane1Color, .1);
+    double plane1Color[3] = {.5, .5, .5};
+    planeSetup(plane1Normal, plane1Center, indexPLANE1, plane1Color, .5);
 
    double plane2Normal[3] = {1, 0, 0};
    double plane2Center[3] = {-500, 0, 0};
-   double plane2Color[3] = {1, 1, 1};
-   planeSetup(plane2Normal, plane2Center, indexPLANE2, plane2Color, .1);
+   double plane2Color[3] = {.5, .5, .5};
+   planeSetup(plane2Normal, plane2Center, indexPLANE2, plane2Color, .5);
 
    double plane3Normal[3] = {0, 0, 1};
    double plane3Center[3] = {0, 0, -500};
-   double plane3Color[3] = {.8, .8, .8};
-   planeSetup(plane3Normal, plane3Center, indexPLANE3, plane3Color, .1);
+   double plane3Color[3] = {.5, .5, .5};
+   planeSetup(plane3Normal, plane3Center, indexPLANE3, plane3Color, .5);
     
    double plane4Normal[3] = {0, 0, -1};
    double plane4Center[3] = {0, 0, 500};
-   double plane4Color[3] = {.8, .8, .8};
-   planeSetup(plane4Normal, plane4Center, indexPLANE4, plane4Color, .1);
+   double plane4Color[3] = {.5, .5, .5};
+   planeSetup(plane4Normal, plane4Center, indexPLANE4, plane4Color, .5);
    
    double plane5Normal[3] = {0, -1, 0};
    double plane5Center[3] = {0, 500, 0};
-   double plane5Color[3] = {.8, .8, .8};
-   planeSetup(plane5Normal, plane5Center, indexPLANE5, plane5Color, .1);
+   double plane5Color[3] = {.5, .5, .5};
+   planeSetup(plane5Normal, plane5Center, indexPLANE5, plane5Color, .5);
    
    double plane6Normal[3] = {-1, 0, 0};
    double plane6Center[3] = {500, 0, 0};
-   double plane6Color[3] = {.8, .8, .8};
-   planeSetup(plane6Normal, plane6Center, indexPLANE6, plane6Color, .1);
+   double plane6Color[3] = {.5, .5, .5};
+   planeSetup(plane6Normal, plane6Center, indexPLANE6, plane6Color, .5);
 
     double camTarget[3] = {0, 0, 0};
     sceneInitialize(camTarget, 256, 1000);
