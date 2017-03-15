@@ -27,8 +27,8 @@ int projectionType;
 double screenHeight = 250;
 double screenWidth = 250;
 
-int numShapes = 5;
-shape *shapes[5];
+int numShapes = 6;
+shape *shapes[7];
 
 int numLights = 2;
 light *lights[2];
@@ -38,6 +38,8 @@ light *lights[2];
 #define indexSPHERE3 2
 #define indexSPHERE4 3
 #define indexPLANE1 4
+#define indexPLANE2 5
+#define indexPLANE3 6
 
 // variables necessary for tracing with the camera
 double target[3];
@@ -320,31 +322,43 @@ void planeSetup(double normal[3], double center[3], int shapeIndex, double color
 // sets up our shapes, which are currently three circles
 void initializeShapes() {
     double sphere1Radius = 30;
-    double sphere1Center[3] = {300, 150, 120 };
+    double sphere1Center[3] = {300, 150, 120 + 100};
     double sphere1Color[3] = {.2, .8, .1};
-    sphereSetup(sphere1Radius, sphere1Center, indexSPHERE1, sphere1Color, .5);
+    sphereSetup(sphere1Radius, sphere1Center, indexSPHERE1, sphere1Color, .3);
 
     double sphere2Radius = 50;
-    double sphere2Center[3] = {180, 170, 80};
+    double sphere2Center[3] = {180, 170, 80 + 100};
     double sphere2Color[3] = {.5, .8, .8};
-    sphereSetup(sphere2Radius, sphere2Center, indexSPHERE2, sphere2Color, .5);
+    sphereSetup(sphere2Radius, sphere2Center, indexSPHERE2, sphere2Color, .3);
 
     double sphere3Radius = 50;
-    double sphere3Center[3] = {100, 170, 200};
+    double sphere3Center[3] = {100, 170, 200 + 100};
     double sphere3Color[3] = {.2, .5, .6};
-    sphereSetup(sphere3Radius, sphere3Center, indexSPHERE3, sphere3Color, .5);
+    sphereSetup(sphere3Radius, sphere3Center, indexSPHERE3, sphere3Color, .3);
 
     double sphere4Radius = 3;
-    double sphere4Center[3] = {200, 200, 40};
+    double sphere4Center[3] = {200, 200, 40 + 100};
     double sphere4Color[3] = {.3, .3, .3};
-    sphereSetup(sphere4Radius, sphere4Center, indexSPHERE4, sphere4Color, .5);
+    sphereSetup(sphere4Radius, sphere4Center, indexSPHERE4, sphere4Color, .3);
     
     double plane1Normal[3];
     double plane1Center[3] = {sphere2Center[0], sphere2Center[1] - sphere2Radius, sphere2Center[2]};
     vecSubtract(3, sphere2Center, plane1Center, plane1Normal);
     vecUnit(3, plane1Normal, plane1Normal);
     double plane1Color[3] = {.8, .8, .8};
-    planeSetup(plane1Normal, plane1Center, indexPLANE1, plane1Color, 0);
+    planeSetup(plane1Normal, plane1Center, indexPLANE1, plane1Color, .1);
+
+    double plane2Normal[3] = {0, 0, -1};
+    double plane2Center[3] = {0, 0, 400 + 100};
+    vecUnit(3, plane2Normal, plane2Normal);
+    double plane2Color[3] = {.8, .8, .8};
+    planeSetup(plane2Normal, plane2Center, indexPLANE2, plane2Color, .1);
+
+    double plane3Normal[3] = {0, -1, 0};
+    double plane3Center[3] = {0, 800, 0 + 100};
+    vecUnit(3, plane3Normal, plane3Normal);
+    double plane3Color[3] = {.8, .8, .8};
+    // planeSetup(plane3Normal, plane3Center, indexPLANE3, plane3Color, .1);
 
     sceneInitialize(sphere2Center, sphere1Radius * 10, 500);
 }
@@ -353,6 +367,7 @@ void initializeShapes() {
 void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
         int altOptionIsDown, int superCommandIsDown) {
     double adjustTheta = 3.14 / 16;
+    double udVector[3] = {0,1,0};
     switch(key) {
         case 257:
         if (projectionType == ORTHOGRAPHIC) {
@@ -362,10 +377,10 @@ void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
         }
         break;
         case 262:  // right
-        rotateView(-adjustTheta, udVec);
+        rotateView(-adjustTheta, udVector);
         break;
         case 263:  // left
-        rotateView(adjustTheta, udVec);
+        rotateView(adjustTheta, udVector);
         break;
         case 264:  // down
         if(shiftIsDown)  {
@@ -395,12 +410,12 @@ void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
 void initializeLights()  {
     lights[0] = malloc(sizeof(light));
     double color[3] = {.5,.5,.5};
-    double pos[3] =   {270, 300, 40};
+    double pos[3] =   {270, 300, 40 + 100};
     lightInit(lights[0], color, pos);
 
     lights[1] = malloc(sizeof(light));
     double color2[3] = {.5,.5,.5};
-    double pos2[3] =   {-170, 300, 40};
+    double pos2[3] =   {-170, 300, 40 + 100};
     lightInit(lights[1], color2, pos2);
 }
 
