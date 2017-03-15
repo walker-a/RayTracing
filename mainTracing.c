@@ -413,12 +413,12 @@ void initializeShapes() {
 // sets up our lights
 void initializeLights()  {
     lights[0] = malloc(sizeof(light));
-    double color[3] = {.7,.7,.7};
+    double color[3] = {.9,.9,.9};
     double pos[3] =   {0, 256, 0};
     lightInit(lights[0], color, pos);
 
     lights[1] = malloc(sizeof(light));
-    double color2[3] = {.7,.7,.7};
+    double color2[3] = {.9,.9,.9};
     double pos2[3] =   {100, 256, 100};
     lightInit(lights[1], color2, pos2);
 }
