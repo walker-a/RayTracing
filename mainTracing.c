@@ -387,7 +387,7 @@ void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
             screenWidth *= .9;
             screenHeight *= .9;
         }  else  {
-            rotateView(adjustTheta, lrVec);
+            rotateView(-adjustTheta, lrVec);
         }
         break;
         case 265:  // up
@@ -396,7 +396,7 @@ void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
             screenHeight *= 1.1;
 //            targetToScreen = targetToScreen + 50;
         }  else  {
-            rotateView(-adjustTheta, lrVec);
+            rotateView(adjustTheta, lrVec);
         }
         break;
         default:
