@@ -410,6 +410,19 @@ void initializeShapes() {
     sceneInitialize(camTarget, 256, 500);
 }
 
+// sets up our lights
+void initializeLights()  {
+    lights[0] = malloc(sizeof(light));
+    double color[3] = {.7,.7,.7};
+    double pos[3] =   {0, 256, 0};
+    lightInit(lights[0], color, pos);
+
+    lights[1] = malloc(sizeof(light));
+    double color2[3] = {.7,.7,.7};
+    double pos2[3] =   {100, 256, 100};
+    lightInit(lights[1], color2, pos2);
+}
+
 // Move camera on arrow keys, zoom through shift + up down, enter to change projection type.
 void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
         int altOptionIsDown, int superCommandIsDown) {
@@ -483,19 +496,6 @@ void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
     }
     pixClearRGB(backgroundColor[0], backgroundColor[1], backgroundColor[2]);
     launchRays();
-}
-
-// sets up our lights
-void initializeLights()  {
-    lights[0] = malloc(sizeof(light));
-    double color[3] = {.7,.7,.7};
-    double pos[3] =   {0, 256, 0};
-    lightInit(lights[0], color, pos);
-
-    lights[1] = malloc(sizeof(light));
-    double color2[3] = {.7,.7,.7};
-    double pos2[3] =   {100, 256, 100};
-    lightInit(lights[1], color2, pos2);
 }
 
 int main(int argc, const char **argv)  {
