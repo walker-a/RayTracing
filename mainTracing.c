@@ -37,7 +37,7 @@ shape *shapes[6];
 //int numShapes = 10;
 //shape *shapes[10];
 
-int numLights = 1;
+int numLights = 2;
 light *lights[2];
 
 #define indexSPHERE1 0
@@ -195,7 +195,9 @@ int lighting(shape *contact, double s[3], double intersectLoc[3], double normal[
         intersect = rayIntersect(nudgedIntersect, rayDir, shadowIntersect, _);
         double rayFromIntersectToLight[3];
         vecSubtract(3, lights[i] -> loc, shadowIntersect, rayFromIntersectToLight);
-        if(intersect < 0 || vecLength(3, rayFromIntersectToLight) > vecLength(3, dirFromContactToLight))  {
+        vecUnit(3, rayFromIntersectToLight, rayFromIntersectToLight);
+
+        if(intersect < 0 || vecDot(3, rayFromIntersectToLight, rayDir) < 0.1 )  {
             double dirToLight[3];
             numUsedLights++;
             vecSubtract(3, lights[i] -> loc, intersectLoc, dirToLight);
@@ -385,12 +387,12 @@ void initializeShapes() {
     double plane1Normal[3] = {0, 1, 0};
     double plane1Center[3] = {0, -256, 0};
     double plane1Color[3] = {1, 1, 1};
-    planeSetup(plane1Normal, plane1Center, indexPLANE1, plane1Color, 0);
+    planeSetup(plane1Normal, plane1Center, indexPLANE1, plane1Color, .1);
 
    double plane2Normal[3] = {1, 0, 0};
    double plane2Center[3] = {-500, 0, 0};
    double plane2Color[3] = {1, 1, 1};
-   planeSetup(plane2Normal, plane2Center, indexPLANE2, plane2Color, 0);
+   planeSetup(plane2Normal, plane2Center, indexPLANE2, plane2Color, .1);
 //
 //    double plane3Normal[3] = {0, 0, 1};
 //    double plane3Center[3] = {0, 0, -500};
@@ -419,12 +421,12 @@ void initializeShapes() {
 // sets up our lights
 void initializeLights()  {
     lights[0] = malloc(sizeof(light));
-    double color[3] = {.9,.9,.9};
+    double color[3] = {.6,.6,.6};
     double pos[3] =   {0, 256, 0};
     lightInit(lights[0], color, pos);
 
     lights[1] = malloc(sizeof(light));
-    double color2[3] = {.9,.9,.9};
+    double color2[3] = {.6,.6,.6};
     double pos2[3] =   {100, 256, 100};
     lightInit(lights[1], color2, pos2);
 }
