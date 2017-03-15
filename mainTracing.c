@@ -632,7 +632,7 @@ void handleKeyDown(int key, int shiftIsDown, int controlIsDown,
 
 int main(int argc, const char **argv)  {
     projectionType = PERSPECTIVE;
-    aliasing = ANTIALIASING_OFF;
+    aliasing = ANTIALIASING_ON;
     maxDepth = maxDepthLow;
     numPasses = 6;
     pixInitialize(WIDTH, HEIGHT, "ray tracing");
